@@ -1,0 +1,4 @@
+[submodule "pytorch_geometric"]
+	path = pytorch_geometric
+  url = git@github.com:AnnetteJing/pytorch_geometric.git
+  branch = master
