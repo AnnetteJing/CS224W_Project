@@ -2,3 +2,6 @@
 	path = pytorch_geometric
   url = git@github.com:AnnetteJing/pytorch_geometric.git
   branch = master
+[submodule "pytorch_geometric_temporal"]
+	path = pytorch_geometric_temporal
+	url = git@github.com:AnnetteJing/pytorch_geometric_temporal.git
