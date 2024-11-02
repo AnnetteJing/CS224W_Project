@@ -29,11 +29,13 @@ dependencies:
   - idna=3.7=py312hca03da5_0
   - ipykernel=6.28.0=py312hca03da5_0
   - ipython=8.27.0=py312hca03da5_0
+  - ipywidgets=8.1.2=py312hca03da5_0
   - jedi=0.19.1=py312hca03da5_0
   - jinja2=3.1.4=py312hca03da5_0
   - jpeg=9e=h80987f9_3
   - jupyter_client=8.6.0=py312hca03da5_0
   - jupyter_core=5.7.2=py312hca03da5_0
+  - jupyterlab_widgets=3.0.10=py312hca03da5_0
   - kiwisolver=1.4.4=py312h313beb8_0
   - lcms2=2.12=hba8e193_0
   - lerc=3.0=hc377ac9_0
@@ -75,7 +77,7 @@ dependencies:
   - pillow=10.4.0=py312h80987f9_0
   - pip=24.2=py312hca03da5_0
   - platformdirs=3.10.0=py312hca03da5_0
-  - polars=1.9.0=py312hcc4db84_0
+  - polars=1.12.0=py312h4b5da93_0
   - prompt-toolkit=3.0.43=py312hca03da5_0
   - prompt_toolkit=3.0.43=hd3eb1b0_0
   - ptyprocess=0.7.0=pyhd3eb1b0_2
@@ -111,6 +113,7 @@ dependencies:
   - urllib3=2.2.3=py312hca03da5_0
   - wcwidth=0.2.5=pyhd3eb1b0_0
   - wheel=0.44.0=py312hca03da5_0
+  - widgetsnbextension=4.0.10=py312hca03da5_0
   - xz=5.4.6=h80987f9_1
   - yaml=0.2.5=h1a28f6b_0
   - zeromq=4.3.5=h313beb8_0
