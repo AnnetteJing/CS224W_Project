@@ -38,6 +38,7 @@ class TimeSeriesDataset:
         horizon: int = 12, 
         train: float = 0.7, 
         test: float = 0.2,
+        shuffle_train: bool = True,
     ):
         """
         dataloader: One of the data loader objects defined under torch_geometric_temporal/dataset
@@ -45,6 +46,7 @@ class TimeSeriesDataset:
         horizon (H): Number of timesteps to predict ahead
         train: Ratio of data assigned to training. See split_data()
         test: Ratio of data assigned to testing. See split_data()
+        shuffle_train: Whether to shuffle of the training data in the time dimension. See split_data()
         ---
         indices: List of (sample_start, sample_end) tuples that specifies the start (t - W + 1) 
             & end (t + H) indices of each data slice (t - W + 1, ..., t, t + 1, ..., t + H)
@@ -59,13 +61,17 @@ class TimeSeriesDataset:
         assert len(self.X.shape) == 3, "Missing dimension(s) in the raw dataset"
         self.split_data(train=train, test=test)
 
-    def split_data(self, train: float = 0.7, test: float = 0.2):
+    def split_data(self, train: float = 0.7, test: float = 0.2, shuffle_train: bool = True):
         """
         train: Ratio of data assigned to training. num_train = round(train * len_of_data)
         test: Ratio of data assigned to testing. num_train_test = num_train + round(test * len_of_data)
+        shuffle_train: Whether to shuffle of the training data in the time dimension
+            - False: (t - W + 1, ..., t, t + 1, ..., t + H) is returned according to t = 0, 1, ...
+            - True: (t - W + 1, ..., t, t + 1, ..., t + H) is returned based on a random order of t
         ---
-        data_splits: Dict of graph signal objects defined under torch_geometric_temporal/signal
-            - train: data[:num_train]
+        data_splits: Dict of Iterable[Data], where the Data object describes an homogeneous graph
+            (see torch_geometric.data.data for the full definition)
+            - train: data[:num_train]. 
             - test: data[num_train:num_train_test]
             - valid: data[num_train_test:]
         scaler: Scaler object with shift & scale set to the mean & std of the training samples 
@@ -86,6 +92,9 @@ class TimeSeriesDataset:
                 if num_train_test < self.data.snapshot_count else None
             )
         }
+        if shuffle_train:
+            permutation = np.random.permutation(num_train)
+            self.data_splits["train"] = [self.data_splits["train"][t] for t in permutation]
         # Create Scaler based on the mean & std of training data
         num_train_samp = self.indices[num_train - 1][-1] # Index of last sample in train split
         X_train = self.X[:, :, :num_train_samp] # [V, F, num_train_samp]
