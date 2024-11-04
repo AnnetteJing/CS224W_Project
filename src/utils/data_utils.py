@@ -59,7 +59,7 @@ class TimeSeriesDataset:
         if len(self.X.shape) == 2: # [V, T]
             self.X = self.X.reshape(self.X.shape[0], 1, self.X.shape[1]) # [V, F=1, T]
         assert len(self.X.shape) == 3, "Missing dimension(s) in the raw dataset"
-        self.split_data(train=train, test=test)
+        self.split_data(train=train, test=test, shuffle_train=shuffle_train)
 
     def split_data(self, train: float = 0.7, test: float = 0.2, shuffle_train: bool = True):
         """
