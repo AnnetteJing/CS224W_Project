@@ -25,6 +25,8 @@ class Scaler:
         ---
         data_norm: [B, V, F, time_steps] OR [B, V, time_steps]. data_norm = (data - shift) / scale
         """
+        if feature_idx is not None and len(data.shape) == 4:
+            data = data[:, :, feature_idx, :]
         shift = self.shift if feature_idx is None else self.shift[:, :, feature_idx, :].squeeze()
         scale = self.scale if feature_idx is None else self.scale[:, :, feature_idx, :].squeeze()
         return (data - shift) / scale
@@ -36,6 +38,8 @@ class Scaler:
         ---
         data_unnorm: [B, V, F, time_steps] OR [B, V, time_steps]. data_unnorm = shift + scale * data
         """
+        if feature_idx is not None and len(data.shape) == 4:
+            data = data[:, :, feature_idx, :]
         shift = self.shift if feature_idx is None else self.shift[:, :, feature_idx, :].squeeze()
         scale = self.scale if feature_idx is None else self.scale[:, :, feature_idx, :].squeeze()
         return shift + scale * data
