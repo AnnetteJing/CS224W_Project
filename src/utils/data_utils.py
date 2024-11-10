@@ -20,7 +20,7 @@ class Scaler:
 
     def normalize(self, data: torch.Tensor, feature_idx: Optional[int] = None) -> torch.Tensor:
         """
-        data: [B, V, F, time_steps] OR [B, V, time_steps]. Must specific feature_idx for the latter
+        data: [B, V, F, time_steps] OR [B, V, time_steps]. Must specify feature_idx for the latter
         feature_idx: Specified index of the input feature. If None, assume data has all features
         ---
         data_norm: [B, V, F, time_steps] OR [B, V, time_steps]. data_norm = (data - shift) / scale
@@ -33,7 +33,7 @@ class Scaler:
 
     def unnormalize(self, data: torch.Tensor, feature_idx: Optional[int] = None) -> torch.Tensor:
         """
-        data: [B, V, F, time_steps] OR [B, V, time_steps]. Must specific feature_idx for the latter
+        data: [B, V, F, time_steps] OR [B, V, time_steps]. Must specify feature_idx for the latter
         feature_idx: Specified index of the input feature. If None, assume data has all features
         ---
         data_unnorm: [B, V, F, time_steps] OR [B, V, time_steps]. data_unnorm = shift + scale * data
