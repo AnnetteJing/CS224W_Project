@@ -5,6 +5,7 @@ from collections import namedtuple
 
 
 Batch = namedtuple("Batch", ["x", "y"])
+BatchedData = namedtuple("BatchedData", ["num_samples", "batches"])
 
 
 class Scaler:
@@ -101,7 +102,7 @@ class TimeSeriesDataset:
         end: Optional[int] = None,
         shuffle: bool = False, 
         fill_last_batch: bool = False
-    ) -> Optional[list[Batch]]:
+    ) -> Optional[BatchedData]:
         """
         Create batches with Batch.x of shape [B, V, F, W] and Batch.y of shape [B, V, F, H].
         If the last batch has less than B (batch_size) samples, optionally fill it with random samples.
@@ -129,7 +130,8 @@ class TimeSeriesDataset:
         batches = []
         for b in range(0, num_samples, batch_size):
             batches.append(Batch(x[b:b + batch_size], y[b:b + batch_size]))
-        return batches
+        batched_data = BatchedData(num_samples, batches)
+        return batched_data
             
     def split_data(self, train: float = 0.7, test: float = 0.2, shuffle_train: bool = True, batch_size: int = 64):
         """
@@ -139,8 +141,9 @@ class TimeSeriesDataset:
             - False: (t - W + 1, ..., t, t + 1, ..., t + H) is returned according to t = 0, 1, ...
             - True: (t - W + 1, ..., t, t + 1, ..., t + H) is returned based on a random order of t
         ---
-        self.data_splits: Dict of lists, each list contains batches assigned to the split, and each batch is a 
-            namedtuple with batch.x being shape [B, V, F, W] and batch.y being shape [B, V, F, H]
+        self.data_splits: Dict of BatchedData. BatchedData.batches is a list of batches assigned to the split, 
+        each batch is a namedtuple with batch.x being shape [B, V, F, W] and batch.y being shape [B, V, F, H], 
+        and BatchedData.num_samples is the total number of samples (sum of batch lengths). 
             - train: data[:num_train]
             - test: data[num_train:num_train_test]
             - valid: data[num_train_test:]
