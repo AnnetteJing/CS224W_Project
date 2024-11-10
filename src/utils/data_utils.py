@@ -3,8 +3,6 @@ import torch
 from typing import Optional
 from collections import namedtuple
 
-from torch_geometric.data import batch
-
 
 Batch = namedtuple("Batch", ["x", "y"])
 
