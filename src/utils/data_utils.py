@@ -141,12 +141,12 @@ class TimeSeriesDataset:
             - False: (t - W + 1, ..., t, t + 1, ..., t + H) is returned according to t = 0, 1, ...
             - True: (t - W + 1, ..., t, t + 1, ..., t + H) is returned based on a random order of t
         ---
-        data_splits: Dict of Iterable[Data], where the Data object describes an homogeneous graph
-            (see torch_geometric.data.data for the full definition)
-            - train: data[:num_train]. 
+        self.data_splits: Dict of lists, each list contains batches assigned to the split, and each batch is a 
+            namedtuple with batch.x being shape [B, V, F, W] and batch.y being shape [B, V, F, H]
+            - train: data[:num_train]
             - test: data[num_train:num_train_test]
             - valid: data[num_train_test:]
-        scaler: Scaler object with shift & scale set to the mean & std of the training samples 
+        self.scaler: Scaler object with shift & scale set to the mean & std of the training samples 
             (across all nodes and training timesteps)
         """
         assert train > 0, "Train ratio must be positive"
