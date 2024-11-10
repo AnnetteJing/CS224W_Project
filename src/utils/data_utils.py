@@ -18,21 +18,27 @@ class Scaler:
         self.shift = shift.reshape(1, 1, -1, 1)
         self.scale = scale.reshape(1, 1, -1, 1)
 
-    def normalize(self, data: torch.Tensor) -> torch.Tensor:
+    def normalize(self, data: torch.Tensor, feature_idx: Optional[int] = None) -> torch.Tensor:
         """
-        data: [B, V, F, W + H]
+        data: [B, V, F, time_steps] OR [B, V, time_steps]. Must specific feature_idx for the latter
+        feature_idx: Specified index of the input feature. If None, assume data has all features
         ---
-        data_norm: [B, V, F, W + H]. data_norm = (data - shift) / scale
+        data_norm: [B, V, F, time_steps] OR [B, V, time_steps]. data_norm = (data - shift) / scale
         """
-        return (data - self.shift) / self.scale
+        shift = self.shift if feature_idx is None else self.shift[:, :, feature_idx, :].squeeze()
+        scale = self.scale if feature_idx is None else self.scale[:, :, feature_idx, :].squeeze()
+        return (data - shift) / scale
 
-    def unnormalize(self, data: torch.Tensor) -> torch.Tensor:
+    def unnormalize(self, data: torch.Tensor, feature_idx: Optional[int] = None) -> torch.Tensor:
         """
-        data: [B, V, F, W + H]
+        data: [B, V, F, time_steps] OR [B, V, time_steps]. Must specific feature_idx for the latter
+        feature_idx: Specified index of the input feature. If None, assume data has all features
         ---
-        data_unnorm: [B, V, F, W + H]. data_unnorm = shift + scale * data
+        data_unnorm: [B, V, F, time_steps] OR [B, V, time_steps]. data_unnorm = shift + scale * data
         """
-        return self.shift + self.scale * data
+        shift = self.shift if feature_idx is None else self.shift[:, :, feature_idx, :].squeeze()
+        scale = self.scale if feature_idx is None else self.scale[:, :, feature_idx, :].squeeze()
+        return shift + scale * data
     
 
 class TimeSeriesDataset:
