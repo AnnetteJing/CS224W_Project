@@ -15,8 +15,8 @@ class Scaler:
         shift: [F,] -> [1, F, 1]
         scale: [F,] -> [1, F, 1]
         """
-        self.shift = shift.reshape(1, 1, -1, 1)
-        self.scale = scale.reshape(1, 1, -1, 1)
+        self.shift = torch.from_numpy(shift.reshape(1, 1, -1, 1))
+        self.scale = torch.from_numpy(scale.reshape(1, 1, -1, 1))
 
     def normalize(self, data: torch.Tensor, feature_idx: Optional[int] = None) -> torch.Tensor:
         """
