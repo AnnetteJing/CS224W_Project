@@ -69,6 +69,7 @@ class TimeSeriesDataset:
         shuffle_train: Whether to shuffle of the training data in the time dimension. See split_data()
         ---
         self.snapshot_count (N): Number of input-target-pairs (input: [V, F, W], target: [V, F, H])
+        self.num_nodes (V): Number of nodes in the graph, i.e. number of individual time series
         self._x: [N, V, F, W]. Stacked inputs
         self._y: [N, V, F, H]. Stacked targets
         self.edge_index: [2, E]. Edges in the form of (start_node, end_node)
@@ -92,6 +93,8 @@ class TimeSeriesDataset:
         if len(self._raw_data.shape) == 2: # [V, T]
             self._raw_data = self._raw_data.reshape(self._raw_data.shape[0], 1, self._raw_data.shape[1]) # [V, F=1, T]
         assert len(self._raw_data.shape) == 3, "Missing dimension(s) in the raw dataset"
+        # Number of nodes in the graph
+        self.num_nodes = self._raw_data.shape[0] # V
         # Split the dataset into train, test, valid batches
         self.split_data(train=train, test=test, shuffle_train=shuffle_train, batch_size=batch_size)
 
