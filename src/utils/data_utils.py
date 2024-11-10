@@ -1,5 +1,12 @@
 import numpy as np
 import torch
+from typing import Optional
+from collections import namedtuple
+
+from torch_geometric.data import batch
+
+
+Batch = namedtuple("Batch", ["x", "y"])
 
 
 class Scaler:
@@ -8,22 +15,22 @@ class Scaler:
         shift: [F,] -> [1, F, 1]
         scale: [F,] -> [1, F, 1]
         """
-        self.shift = shift.reshape(1, -1, 1)
-        self.scale = scale.reshape(1, -1, 1)
+        self.shift = shift.reshape(1, 1, -1, 1)
+        self.scale = scale.reshape(1, 1, -1, 1)
 
     def normalize(self, data: torch.Tensor) -> torch.Tensor:
         """
-        data: [V, F, W + H]
+        data: [B, V, F, W + H]
         ---
-        data_norm: [V, F, W + H]. data_norm = (data - shift) / scale
+        data_norm: [B, V, F, W + H]. data_norm = (data - shift) / scale
         """
         return (data - self.shift) / self.scale
 
     def unnormalize(self, data: torch.Tensor) -> torch.Tensor:
         """
-        data: [V, F, W + H]
+        data: [B, V, F, W + H]
         ---
-        data_unnorm: [V, F, W + H]. data_unnorm = shift + scale * data
+        data_unnorm: [B, V, F, W + H]. data_unnorm = shift + scale * data
         """
         return self.shift + self.scale * data
     
@@ -31,6 +38,7 @@ class Scaler:
 class TimeSeriesDataset:
     # TODO: This only works on PemsBayDatasetLoader & METRLADatasetLoader since their dataloaders are
     # modified to have indices and not be normalized using the entire dataset (preventing data leakage). 
+    # Further, it is assumed the given graph is static over time, i.e. we only observe 1 graph. 
     def __init__(
         self, 
         dataloader, 
@@ -38,6 +46,7 @@ class TimeSeriesDataset:
         horizon: int = 12, 
         train: float = 0.7, 
         test: float = 0.2,
+        batch_size: int = 64, 
         shuffle_train: bool = True,
     ):
         """
@@ -46,22 +55,75 @@ class TimeSeriesDataset:
         horizon (H): Number of timesteps to predict ahead
         train: Ratio of data assigned to training. See split_data()
         test: Ratio of data assigned to testing. See split_data()
+        batch_size (B): Number of continuous timeslices to load. 
+            Divides N (self.snapshot_count) into batches of shape [B, V, F, H]
         shuffle_train: Whether to shuffle of the training data in the time dimension. See split_data()
         ---
-        indices: List of (sample_start, sample_end) tuples that specifies the start (t - W + 1) 
+        self.snapshot_count (N): Number of input-target-pairs (input: [V, F, W], target: [V, F, H])
+        self._x: [N, V, F, W]. Stacked inputs
+        self._y: [N, V, F, H]. Stacked targets
+        self.edge_index: [2, E]. Edges in the form of (start_node, end_node)
+        self.edge_attr: [E,]. Edge attributes
+        self._indices: List of (sample_start, sample_end) tuples that specifies the start (t - W + 1) 
             & end (t + H) indices of each data slice (t - W + 1, ..., t, t + 1, ..., t + H)
-        X: np.array[V, F, T], V=num_nodes, F=num_features, T=num_timesteps. Raw dataset
-        data: Graph signal object defined under torch_geometric_temporal/signal
+        self._raw_data: np.array[V, F, T], V=num_nodes, F=num_features, T=num_timesteps. Raw dataset
         """
-        self.data = dataloader.get_dataset(num_timesteps_in=window, num_timesteps_out=horizon)
-        self.indices = dataloader.indices
-        self.X = dataloader.X.detach().cpu().numpy().astype(np.float32)
-        if len(self.X.shape) == 2: # [V, T]
-            self.X = self.X.reshape(self.X.shape[0], 1, self.X.shape[1]) # [V, F=1, T]
-        assert len(self.X.shape) == 3, "Missing dimension(s) in the raw dataset"
-        self.split_data(train=train, test=test, shuffle_train=shuffle_train)
+        # StaticGraphTemporalSignal object defined under torch_geometric_temporal/signal
+        dataset = dataloader.get_dataset(num_timesteps_in=window, num_timesteps_out=horizon)
+        # Inputs and targets before data-splitting
+        self.snapshot_count = dataset.snapshot_count # N
+        self._x = torch.stack([snapshot.x for snapshot in dataset]) # [N, V, F, W]
+        self._y = torch.stack([snapshot.y for snapshot in dataset]) # [N, V, F, H]
+        # Given the graph is static, edge_index & edge_attr are the same for all timestamps
+        self.edge_index = dataset[0].edge_index # [2, E]
+        self.edge_attr = dataset[0].edge_attr # [E,]
+        # Info required to create the Scaler object given any training ratio
+        self._indices = dataloader.indices
+        self._raw_data = dataloader.X.detach().cpu().numpy().astype(np.float32)
+        if len(self._raw_data.shape) == 2: # [V, T]
+            self._raw_data = self._raw_data.reshape(self._raw_data.shape[0], 1, self._raw_data.shape[1]) # [V, F=1, T]
+        assert len(self._raw_data.shape) == 3, "Missing dimension(s) in the raw dataset"
+        # Split the dataset into train, test, valid batches
+        self.split_data(train=train, test=test, shuffle_train=shuffle_train, batch_size=batch_size)
 
-    def split_data(self, train: float = 0.7, test: float = 0.2, shuffle_train: bool = True):
+    def _create_batches(
+        self,
+        batch_size: int, 
+        start: int = 0,
+        end: Optional[int] = None,
+        shuffle: bool = False, 
+        fill_last_batch: bool = False
+    ) -> Optional[list[Batch]]:
+        """
+        Create batches with Batch.x of shape [B, V, F, W] and Batch.y of shape [B, V, F, H].
+        If the last batch has less than B (batch_size) samples, optionally fill it with random samples.
+        """
+        end = self.snapshot_count if end is None else end
+        if not (0 <= start < end <= self.snapshot_count):
+            return None
+        x, y = self._x[start:end], self._y[start:end]
+        num_samples = len(x)
+        # Optionally append random samples so that num_samples is a multiple of B (batch_size)
+        if fill_last_batch and num_samples % batch_size != 0:
+            extra_sample_idx = np.random.choice(
+                range(num_samples), 
+                size=batch_size - num_samples % batch_size, 
+                replace=False
+            )
+            x = torch.cat(x, x[extra_sample_idx])
+            y = torch.cat(y, y[extra_sample_idx])
+            num_samples = len(x)
+        # Optionally shuffle the samples
+        if shuffle:
+            permutation = np.random.permutation(num_samples)
+            x, y = x[permutation], y[permutation]
+        # Generate batches
+        batches = []
+        for b in range(0, num_samples, batch_size):
+            batches.append(Batch(x[b:b + batch_size], y[b:b + batch_size]))
+        return batches
+            
+    def split_data(self, train: float = 0.7, test: float = 0.2, shuffle_train: bool = True, batch_size: int = 64):
         """
         train: Ratio of data assigned to training. num_train = round(train * len_of_data)
         test: Ratio of data assigned to testing. num_train_test = num_train + round(test * len_of_data)
@@ -78,28 +140,23 @@ class TimeSeriesDataset:
             (across all nodes and training timesteps)
         """
         assert train > 0, "Train ratio must be positive"
-        num_train = round(train * self.data.snapshot_count)
-        num_train_test = num_train + round(test * self.data.snapshot_count)
+        num_train = round(train * self.snapshot_count)
+        num_train_test = num_train + round(test * self.snapshot_count)
         # Create data splits
         self.data_splits = {
-            "train": self.data[:num_train], 
-            "test": (
-                self.data[num_train:num_train_test] 
-                if num_train_test <= self.data.snapshot_count else None
+            "train": self._create_batches(
+                batch_size=batch_size, end=num_train, shuffle=shuffle_train
             ), 
-            "valid": (
-                self.data[num_train_test:]
-                if num_train_test < self.data.snapshot_count else None
-            )
+            "test": self._create_batches(
+                batch_size=batch_size, start=num_train, end=num_train_test
+            ), 
+            "valid": self._create_batches(batch_size=batch_size, start=num_train_test)
         }
-        if shuffle_train:
-            permutation = np.random.permutation(num_train)
-            self.data_splits["train"] = [self.data_splits["train"][t] for t in permutation]
         # Create Scaler based on the mean & std of training data
-        num_train_samp = self.indices[num_train - 1][-1] # Index of last sample in train split
-        X_train = self.X[:, :, :num_train_samp] # [V, F, num_train_samp]
+        num_train_samp = self._indices[num_train - 1][-1] # Index of last sample in train split
+        raw_data_train = self._raw_data[:, :, :num_train_samp] # [V, F, num_train_samp]
         self.scaler = Scaler(
-            shift=np.mean(X_train, axis=(0, 2)), 
-            scale=np.std(X_train, axis=(0, 2))
+            shift=np.mean(raw_data_train, axis=(0, 2)), 
+            scale=np.std(raw_data_train, axis=(0, 2))
         )
 
