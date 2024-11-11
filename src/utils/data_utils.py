@@ -70,10 +70,11 @@ class TimeSeriesDataset:
         ---
         self.snapshot_count (N): Number of input-target-pairs (input: [V, F, W], target: [V, F, H])
         self.num_nodes (V): Number of nodes in the graph, i.e. number of individual time series
-        self._x: [N, V, F, W]. Stacked inputs
-        self._y: [N, V, F, H]. Stacked targets
         self.edge_index: [2, E]. Edges in the form of (start_node, end_node)
         self.edge_attr: [E,]. Edge attributes
+        
+        self._x: [N, V, F, W]. Stacked inputs
+        self._y: [N, V, F, H]. Stacked targets
         self._indices: List of (sample_start, sample_end) tuples that specifies the start (t - W + 1) 
             & end (t + H) indices of each data slice (t - W + 1, ..., t, t + 1, ..., t + H)
         self._raw_data: np.array[V, F, T], V=num_nodes, F=num_features, T=num_timesteps. Raw dataset
