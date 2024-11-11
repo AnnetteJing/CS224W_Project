@@ -136,7 +136,9 @@ class TimeSeriesDataset:
         batched_data = BatchedData(num_samples, batches)
         return batched_data
             
-    def split_data(self, train: float = 0.7, test: float = 0.2, shuffle_train: bool = True, batch_size: int = 64):
+    def split_data(
+        self, train: float = 0.7, test: float = 0.2, shuffle_train: bool = True, batch_size: int = 64
+    ) -> None:
         """
         train: Ratio of data assigned to training. num_train = round(train * len_of_data)
         test: Ratio of data assigned to testing. num_train_test = num_train + round(test * len_of_data)
