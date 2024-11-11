@@ -36,7 +36,7 @@ class Evaluator:
         num_features (F): Number of features.
         feature_idx: Index of the feature to evaluate. If None, evaluate all available features (F total).
             By default, we only evaluate the first feature.
-        target_horizon_idx: List indices of h-step ahead forecasts that should be evaluated. 
+        target_horizon_idx: List of indices of h-step ahead forecasts that should be evaluated. 
             By default we look 15, 30, and 60 minutes into the future, which translates to 3, 6, 12 steps 
             ahead because the timesteps are 5 minutes apart. Due to 0-indexing, this is 2, 5, and 11. 
         max_horizon (H): Maximum horizon of the targets. 
@@ -84,7 +84,7 @@ class Evaluator:
         mask = get_mask(y, additional_val=0)
         self.num_samples_non_zero += torch.sum(mask, dim=0)
         diff = torch.where(mask, y - y_hat, 0)
-        self.sape += torch.sum(torch.abs(diff / torch.where(mask, y, 1)), dim=0)
+        self.sape += torch.sum(torch.abs(diff / torch.where(mask, y, 1)), dim=0) * 100
 
     def get_metrics(self, agg_nodes: bool = True) -> dict[torch.Tensor]:
         """
@@ -105,5 +105,17 @@ class Evaluator:
             mape = self.sape / self.num_samples_non_zero
         return {"mse": mse, "mae": mae, "mape": mape}
 
-    def print_metrics(self):
-        pass
+    def print_metrics(self, metrics: Optional[dict[torch.Tensor]] = None) -> None:
+        """
+        metrics: Dict of [F, H] OR [H,] shaped tensors. Output of get_metrics(agg_nodes=True)
+        """
+        if metrics is None:
+            metrics = self.get_metrics()
+        for name, metric in metrics.items():
+            print(f"--- {name.upper()} ---")
+            for i in self.target_horizon_idx:
+                vals_i = [metric[i]] if len(metric.shape) == 1 else metric[:, i]
+                print(f"{(i + 1) * 5:<2d}-min ahead:", *(f"{val:.4f}" for val in vals_i))
+            avg_vals = [torch.sum(metric)] if len(metric.shape) == 1 else torch.sum(metric, dim=1)
+            print(f"Average across all horizons:", *(f"{val:.4f}" for val in avg_vals))
+
