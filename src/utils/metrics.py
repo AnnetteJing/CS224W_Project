@@ -9,7 +9,7 @@ def get_mask(
 ) -> torch.Tensor:
     """
     Returns a mask of Booleans based on whether values in y is np.nan or in additional_val
-    ---
+    
     y: Forecast actuals / targets. np.nan is understood as missing values, which should not be counted in loss functions
     additional_val: Value in addition to np.nan that should be masked
         e.g. Zeros need to be masked when computing MAPEs
@@ -57,7 +57,8 @@ class Evaluator:
 
     def _init_zeros(self) -> torch.Tensor:
         """
-        Creates a zero tensor based on self.num_nodes (V) & self.num_features (f)
+        Creates a zero tensor based on self.num_nodes (V) & optionally self.num_features (F)
+
         ---
         zeros: [V, F, H] if self.feature_idx is None, else [V, H]
         """
@@ -68,8 +69,10 @@ class Evaluator:
 
     def update_metrics(self, y: torch.Tensor, y_hat: torch.Tensor) -> None:
         """
+        Update components required to compute RMSE, MAE, and MAPE (see get_metrics)
+
         y: [B, V, F, H] OR [B, V, H]. Forecast targets / actuals
-        y_hat: [B, V, F, H] if self.feature_idx is None, else [B, V, H]. Forecasts
+        y_hat: [B, V, F, H] if self.feature_idx is None, else [B, V, H]. Forecast values
         """
         if len(y.shape) == 4 and self.feature_idx is not None:
             y = y[:, :, self.feature_idx, :] # [B, V, F, H] -> [B, V, H]
@@ -88,25 +91,32 @@ class Evaluator:
 
     def get_metrics(self, agg_nodes: bool = True) -> dict[torch.Tensor]:
         """
+        Returns a dictionary of evaluation metrics consisting of RMSE, MAE, and MAPE
+
         agg_nodes: Whether to aggregate across nodes / series
+            - True: Aggregate across timesteps & nodes
+            - False: Aggregate across timesteps only
         ---
         mse, mae, mape: [F, H] OR [H,] if agg_nodes, else [V, F, H] OR [V, H]
-            - mse: Mean square error
+            - rmse: Root mean square error
             - mae: Mean absolute error
             - mape: Mean absolute percentage error
         """
         if agg_nodes: # [F, H] if self.feature_idx is None, else [H,]
-            mse = torch.sum(self.sse, dim=0) / torch.sum(self.num_samples, dim=0)
+            rmse = torch.sqrt(torch.sum(self.sse, dim=0) / torch.sum(self.num_samples, dim=0))
             mae = torch.sum(self.sae, dim=0) / torch.sum(self.num_samples, dim=0)
             mape = torch.sum(self.sape, dim=0) / torch.sum(self.num_samples_non_zero, dim=0)
         else: # [V, F, H] if self.feature_idx is None, else [V, H]
-            mse = self.sse / self.num_samples
+            rmse = torch.sqrt(self.sse / self.num_samples)
             mae = self.sae / self.num_samples
             mape = self.sape / self.num_samples_non_zero
-        return {"mse": mse, "mae": mae, "mape": mape}
+        return {"rmse": rmse, "mae": mae, "mape": mape}
 
     def print_metrics(self, metrics: Optional[dict[torch.Tensor]] = None) -> None:
         """
+        Print out h-step ahead metrics for h specified by self.target_horizon_idx & 
+        metrics averaged across all horizons (1, ..., H=self.max_horizon)
+
         metrics: Dict of [F, H] OR [H,] shaped tensors. Output of get_metrics(agg_nodes=True)
         """
         if metrics is None:
@@ -116,6 +126,6 @@ class Evaluator:
             for i in self.target_horizon_idx:
                 vals_i = [metric[i]] if len(metric.shape) == 1 else metric[:, i]
                 print(f"{(i + 1) * 5:<2d}-min ahead:", *(f"{val:.4f}" for val in vals_i))
-            avg_vals = [torch.sum(metric)] if len(metric.shape) == 1 else torch.sum(metric, dim=1)
+            avg_vals = [torch.mean(metric)] if len(metric.shape) == 1 else torch.mean(metric, dim=1)
             print(f"Average across all horizons:", *(f"{val:.4f}" for val in avg_vals))
 
