@@ -11,8 +11,8 @@ BatchedData = namedtuple("BatchedData", ["num_samples", "batches"])
 class Scaler:
     def __init__(self, shift: np.ndarray, scale: np.ndarray):
         """
-        shift: [F,] -> [1, F, 1]
-        scale: [F,] -> [1, F, 1]
+        shift: [F,] -> [1, 1, F, 1]
+        scale: [F,] -> [1, 1, F, 1]
         """
         self.shift = torch.from_numpy(shift.reshape(1, 1, -1, 1))
         self.scale = torch.from_numpy(scale.reshape(1, 1, -1, 1))
