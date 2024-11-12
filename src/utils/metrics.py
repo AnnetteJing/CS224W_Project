@@ -97,7 +97,7 @@ class Evaluator:
             - True: Aggregate across timesteps & nodes
             - False: Aggregate across timesteps only
         ---
-        mse, mae, mape: [F, H] OR [H,] if agg_nodes, else [V, F, H] OR [V, H]
+        rmse, mae, mape: [F, H] OR [H,] if agg_nodes, else [V, F, H] OR [V, H]
             - rmse: Root mean square error
             - mae: Mean absolute error
             - mape: Mean absolute percentage error
@@ -125,7 +125,7 @@ class Evaluator:
             print(f"--- {name.upper()} ---")
             for i in self.target_horizon_idx:
                 vals_i = [metric[i]] if len(metric.shape) == 1 else metric[:, i]
-                print(f"{(i + 1) * 5:<2d}-min ahead:", *(f"{val:.4f}" for val in vals_i))
+                print(f"{(i + 1) * 5:2d}-min ahead:", *(f"{val:.4f}" for val in vals_i))
             avg_vals = [torch.mean(metric)] if len(metric.shape) == 1 else torch.mean(metric, dim=1)
             print(f"Average across all horizons:", *(f"{val:.4f}" for val in avg_vals))
 

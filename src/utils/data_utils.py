@@ -42,7 +42,7 @@ class Scaler:
         shift = self.shift if feature_idx is None else self.shift[:, :, feature_idx, :].squeeze()
         scale = self.scale if feature_idx is None else self.scale[:, :, feature_idx, :].squeeze()
         return shift + scale * data
-    
+
 
 class TimeSeriesDataset:
     # TODO: This only works on PemsBayDatasetLoader & METRLADatasetLoader since their dataloaders are
@@ -72,7 +72,7 @@ class TimeSeriesDataset:
         self.num_nodes (V): Number of nodes in the graph, i.e. number of individual time series
         self.edge_index: [2, E]. Edges in the form of (start_node, end_node)
         self.edge_attr: [E,]. Edge attributes
-        
+
         self._x: [N, V, F, W]. Stacked inputs
         self._y: [N, V, F, H]. Stacked targets
         self._indices: List of (sample_start, sample_end) tuples that specifies the start (t - W + 1) 
