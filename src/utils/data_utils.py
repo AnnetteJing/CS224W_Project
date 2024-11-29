@@ -5,7 +5,7 @@ from collections import namedtuple
 
 
 Batch = namedtuple("Batch", ["x", "y"])
-BatchedData = namedtuple("BatchedData", ["num_samples", "batches"])
+BatchedData = namedtuple("BatchedData", ["num_samples", "num_batches", "batches"])
 
 
 class Scaler:
@@ -123,8 +123,8 @@ class TimeSeriesDataset:
                 size=batch_size - num_samples % batch_size, 
                 replace=False
             )
-            x = torch.cat(x, x[extra_sample_idx])
-            y = torch.cat(y, y[extra_sample_idx])
+            x = torch.cat((x, x[extra_sample_idx]))
+            y = torch.cat((y, y[extra_sample_idx]))
             num_samples = len(x)
         # Optionally shuffle the samples
         if shuffle:
@@ -134,7 +134,7 @@ class TimeSeriesDataset:
         batches = []
         for b in range(0, num_samples, batch_size):
             batches.append(Batch(x[b:b + batch_size], y[b:b + batch_size]))
-        batched_data = BatchedData(num_samples, batches)
+        batched_data = BatchedData(num_samples, len(batches), batches)
         return batched_data
             
     def split_data(
@@ -162,7 +162,7 @@ class TimeSeriesDataset:
         # Create data splits
         self.data_splits = {
             "train": self._create_batches(
-                batch_size=batch_size, end=num_train, shuffle=shuffle_train
+                batch_size=batch_size, end=num_train, shuffle=shuffle_train, fill_last_batch=True
             ), 
             "test": self._create_batches(
                 batch_size=batch_size, start=num_train, end=num_train_test
