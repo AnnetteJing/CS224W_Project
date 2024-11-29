@@ -19,7 +19,25 @@ def get_mask(
     mask = ~torch.isnan(y)
     if additional_val is not None:
         mask = torch.logical_and(mask, y != additional_val)
-    return mask
+    return mask.to(y.device)
+
+
+def masked_mae_loss(
+    y: torch.Tensor, y_hat: torch.Tensor
+) -> torch.Tensor:
+    """
+    Mean absolute error (MAE) loss that masks out NaN values in forecast targets so they won't be considered
+
+    y: [B, V, F, H] OR [B, V, H]. Forecast targets / actuals
+    y_hat: [B, V, F, H] OR [B, V, H]. Forecast values
+    ---
+    mae: 1D torch tensor. MAE averaged across all dimensions of the [V, F, H] OR [V, H] tensor
+        (sum_{y_i is not NaN} |y_i - hat{y}_i|) / (# non-NaN y_i's), 
+        which includes averaging across all nodes/series (V), features (F), and horizons (H). 
+    """
+    assert y.shape == y_hat.shape
+    mask = get_mask(y)
+    return torch.mean(torch.abs(y[mask] - y_hat[mask]))
 
 
 class Evaluator:
@@ -78,7 +96,7 @@ class Evaluator:
             y = y[:, :, self.feature_idx, :] # [B, V, F, H] -> [B, V, H]
         assert y.shape == y_hat.shape
         # Updates for MSE & MAE
-        mask = get_mask(y) 
+        mask = get_mask(y)
         self.num_samples += torch.sum(mask, dim=0)
         diff = torch.where(mask, y - y_hat, 0)
         self.sse += torch.sum(diff**2, dim=0)
