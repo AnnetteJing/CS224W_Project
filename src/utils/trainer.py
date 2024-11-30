@@ -148,16 +148,19 @@ class ModelTrainer:
         valid_loss /= self.df["valid"].num_batches
         return valid_loss
 
-    def train(self, verbose: bool = True, print_per_epoch: int = 10) -> None:
+    def train(self, verbose: bool = True, print_per_epoch: int = 10, early_stopping: bool = True) -> None:
         """
         Train & validate the model for multiple epochs, saving the best model based on validation loss 
-        (if available, if not, use training loss).
+        (use training loss if validation loss is not available).
 
         verbose: Whether to print training & validation loss every few epochs
         print_per_epoch: Number of epochs between printing losses if verbose=True
+        early_stopping: Whether to perform early stopping when validation loss has been increasing for 15 epochs
+            (use training loss if validation loss is not available)
         """
         best_loss = float("inf")
         best_model_epoch = 0
+        num_loss_increase, prev_loss = 0, float("inf") # Needed for early stopping
         epoch_loop = range(self.epochs) if verbose else tqdm(range(self.epochs))
         for epoch in epoch_loop:
             if verbose:
@@ -177,6 +180,16 @@ class ModelTrainer:
                 if valid_loss is not None:
                     print_statement += f", Valid loss = {valid_loss:.4f}"
                 print(print_statement)
+            # Optional early stopping
+            if early_stopping:
+                if loss > prev_loss:
+                    num_loss_increase += 1
+                else:
+                    num_loss_increase = 0
+                if num_loss_increase == 15:
+                    print("Loss has been increasing for 15 epochs, performing early stopping...")
+                    break
+                prev_loss = loss
         # Load best model
         if verbose:
             print(f"Saving best model from epoch {best_model_epoch} with loss {best_loss:4f}")
