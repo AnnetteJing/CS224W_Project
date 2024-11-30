@@ -1,0 +1,9 @@
+torch==2.4.0
+torch-scatter -f https://pytorch-geometric.com/whl/torch-2.4.0+cu121.html
+torch-sparse -f https://pytorch-geometric.com/whl/torch-2.4.0+cu121.html
+torch-geometric==2.6.1
+ogb
+tqdm
+numpy
+pandas
+scikit-learn
