@@ -9,7 +9,6 @@ from pytorch_geometric_temporal.torch_geometric_temporal.dataset import PemsBayD
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
-from .. import *
 from src.utils.trainer import *
 
 
