@@ -9,6 +9,7 @@ from pytorch_geometric_temporal.torch_geometric_temporal.dataset import PemsBayD
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
+from CS224W_Project import *
 from src.utils.trainer import *
 
 
@@ -42,7 +43,7 @@ class RecurrentGCN(torch.nn.Module):
 def main():
     df = TimeSeriesDataset(PemsBayDatasetLoader(), batch_size=32)
     model = RecurrentGCN(node_features=2)
-    CONFIG_PATH = "./src/configs"
+    # CONFIG_PATH = "~/CS224W_Project/src/configs"
     with open(os.path.join(CONFIG_PATH, "train_config.yaml"), "r") as f:
         config = yaml.safe_load(f)
     config["train"]["epochs"] = 1 # Reduce epochs until we want a full run
