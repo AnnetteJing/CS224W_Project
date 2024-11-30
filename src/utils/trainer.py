@@ -5,10 +5,8 @@ from tqdm import tqdm
 import time
 import copy
 
-from traitlets import default
-
-from ..utils.data_utils import *
-from ..utils.metrics import *
+from src.utils.data_utils import *
+from src.utils.metrics import *
 
 
 class ModelTrainer:
