@@ -57,6 +57,7 @@ class TimeSeriesDataset:
         test: float = 0.2,
         batch_size: int = 64, 
         shuffle_train: bool = True,
+        free_mem_after_data_split: bool = True
     ):
         """
         dataloader: One of the data loader objects defined under torch_geometric_temporal/dataset
@@ -65,14 +66,18 @@ class TimeSeriesDataset:
         train: Ratio of data assigned to training. See split_data()
         test: Ratio of data assigned to testing. See split_data()
         batch_size (B): Number of continuous timeslices to load. 
-            Divides N (self.snapshot_count) into batches of shape [B, V, F, H]
+            Divides N (self.snapshot_count) into batches of shape [B, V, F, H], where F is the number of features available
         shuffle_train: Whether to shuffle of the training data in the time dimension. See split_data()
+        free_mem_after_data_split: Whether to delete attributes only useful to datasplitting after one data split is complete
         ---
         self.snapshot_count (N): Number of input-target-pairs (input: [V, F, W], target: [V, F, H])
         self.num_nodes (V): Number of nodes in the graph, i.e. number of individual time series
         self.edge_index: [2, E]. Edges in the form of (start_node, end_node)
         self.edge_attr: [E,]. Edge attributes
+        self.data_splits: Train, test, valid sample splits. See split_data()
+        self.scaler: Scaler object based on the training sample. See split_data()
 
+        The following will be deleted if split_data() is called with free_memory=True (decided by free_mem_after_data_split): 
         self._x: [N, V, F, W]. Stacked inputs
         self._y: [N, V, F, H]. Stacked targets
         self._indices: List of (sample_start, sample_end) tuples that specifies the start (t - W + 1) 
@@ -97,7 +102,13 @@ class TimeSeriesDataset:
         # Number of nodes in the graph
         self.num_nodes = self._raw_data.shape[0] # V
         # Split the dataset into train, test, valid batches
-        self.split_data(train=train, test=test, shuffle_train=shuffle_train, batch_size=batch_size)
+        self.split_data(
+            train=train, 
+            test=test, 
+            shuffle_train=shuffle_train, 
+            batch_size=batch_size, 
+            free_memory=free_mem_after_data_split
+        )
 
     def _create_batches(
         self,
@@ -138,7 +149,12 @@ class TimeSeriesDataset:
         return batched_data
             
     def split_data(
-        self, train: float = 0.7, test: float = 0.2, shuffle_train: bool = True, batch_size: int = 64
+        self, 
+        train: float = 0.7, 
+        test: float = 0.2, 
+        shuffle_train: bool = True, 
+        batch_size: int = 64, 
+        free_memory: bool = True,
     ) -> None:
         """
         train: Ratio of data assigned to training. num_train = round(train * len_of_data)
@@ -146,6 +162,8 @@ class TimeSeriesDataset:
         shuffle_train: Whether to shuffle of the training data in the time dimension
             - False: (t - W + 1, ..., t, t + 1, ..., t + H) is returned according to t = 0, 1, ...
             - True: (t - W + 1, ..., t, t + 1, ..., t + H) is returned based on a random order of t
+        batch_size (B): Number of continuous timeslices to load. See __init__()
+        free_memory: 
         ---
         self.data_splits: Dict of BatchedData. BatchedData.batches is a list of batches assigned to the split, 
         each batch is a namedtuple with batch.x being shape [B, V, F, W] and batch.y being shape [B, V, F, H], 
@@ -176,4 +194,6 @@ class TimeSeriesDataset:
             shift=np.mean(raw_data_train, axis=(0, 2)), 
             scale=np.std(raw_data_train, axis=(0, 2))
         )
+        if free_memory:
+            del self._x, self._y, self._indices, self._raw_data
 
