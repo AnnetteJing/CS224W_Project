@@ -13,4 +13,4 @@ ROOT_DIR = get_git_root(".")
 PYGT_PATH = os.path.join(ROOT_DIR, "pytorch_geometric_temporal")
 CONFIG_PATH = os.path.join(ROOT_DIR, "src/configs")
 
-sys.path.extend([ROOT_DIR, PYGT_PATH])
+sys.path.extend([ROOT_DIR, PYGT_PATH, CONFIG_PATH])
