@@ -99,8 +99,9 @@ class TimeSeriesDataset:
         if len(self._raw_data.shape) == 2: # [V, T]
             self._raw_data = self._raw_data.reshape(self._raw_data.shape[0], 1, self._raw_data.shape[1]) # [V, F=1, T]
         assert len(self._raw_data.shape) == 3, "Missing dimension(s) in the raw dataset"
-        # Number of nodes in the graph
+        # Number of nodes & features in the graph
         self.num_nodes = self._raw_data.shape[0] # V
+        self.num_features = self._raw_data.shape[1] # F
         # Split the dataset into train, test, valid batches
         self.split_data(
             train=train, 
