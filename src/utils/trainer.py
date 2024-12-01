@@ -203,7 +203,7 @@ class ModelTrainer:
             print(f"Saving best model from epoch {best_model_epoch} with loss {best_loss:4f}")
         self.model = best_model
 
-    def test(self, test_data: Optional[BatchedData] = None) -> Evaluator:
+    def test(self, test_data: Optional[BatchedData] = None, use_progress_bar: bool = False) -> Evaluator:
         """
         Test the model's performance
 
@@ -221,7 +221,8 @@ class ModelTrainer:
         test_loss = 0
         with torch.no_grad(), self.amp_context:
             # for x, y in test_data.batches[:10]:
-            for x, y in test_data.batches:
+            iter_test_batches = tqdm(test_data.batches) if use_progress_bar else test_data.batches
+            for x, y in iter_test_batches:
                 x, y = x.to(self.device), y.to(self.device)
                 # Compute test loss based on model prediction of normalized targets 
                 y_hat = self.get_preds(x=x)
