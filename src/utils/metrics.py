@@ -47,7 +47,8 @@ class Evaluator:
         num_features: Optional[int] = None,
         feature_idx: Optional[int] = 0,
         target_horizon_idx: Iterable[int] = (2, 5, 11), 
-        max_horizon: int = 12
+        max_horizon: int = 12, 
+        device: Optional[str] = None,
     ):
         """
         num_nodes (V): Number of nodes in the graph, i.e. number of individual time series
@@ -59,6 +60,7 @@ class Evaluator:
             ahead because the timesteps are 5 minutes apart. Due to 0-indexing, this is 2, 5, and 11. 
         max_horizon (H): Maximum horizon of the targets. 
             Defaults to 12, which is 60 minutes into the future. 
+        device: "cuda" or "cpu". If None, uses "cuda" whenever available 
         """
         assert num_features is not None or feature_idx is not None, "Must specify either num_features or feature_idx"
         self.num_nodes = num_nodes
@@ -66,6 +68,10 @@ class Evaluator:
         self.feature_idx = feature_idx
         self.target_horizon_idx = sorted(list(target_horizon_idx))
         self.max_horizon = max_horizon
+        if device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = torch.device(device)
         # Initialize everything to shape [V, f, H] or [V, H] of 0s (one 0 for each node, feature, & horizon)
         self.num_samples = self._init_zeros()
         self.num_samples_non_zero = self._init_zeros()
@@ -81,9 +87,9 @@ class Evaluator:
         zeros: [V, F, H] if self.feature_idx is None, else [V, H]
         """
         if self.feature_idx is None:
-            return torch.zeros(self.num_nodes, self.num_features, self.max_horizon) # [V, F, H]
+            return torch.zeros(self.num_nodes, self.num_features, self.max_horizon).to(self.device) # [V, F, H]
         else:
-            return torch.zeros(self.num_nodes, self.max_horizon) # [V, H]
+            return torch.zeros(self.num_nodes, self.max_horizon).to(self.device) # [V, H]
 
     def update_metrics(self, y: torch.Tensor, y_hat: torch.Tensor) -> None:
         """
@@ -95,6 +101,7 @@ class Evaluator:
         if len(y.shape) == 4 and self.feature_idx is not None:
             y = y[:, :, self.feature_idx, :] # [B, V, F, H] -> [B, V, H]
         assert y.shape == y_hat.shape
+        y, y_hat = y.to(self.device), y_hat.to(self.device)
         # Updates for MSE & MAE
         mask = get_mask(y)
         self.num_samples += torch.sum(mask, dim=0)
