@@ -99,7 +99,7 @@ class ModelTrainer:
         """
         # Normalize targets
         y_norm = self.scaler.normalize(
-            y, feature_idx=self.feature_idx
+            y.to(self.device), feature_idx=self.feature_idx
         ) # [B, V, F, H] -> [B, V, F, H] if self.feature_idx is None else [B, V, H]
         # Compute loss
         return self.loss_func(y=y_norm, y_hat=y_hat)
