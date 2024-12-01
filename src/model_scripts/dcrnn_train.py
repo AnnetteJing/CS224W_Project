@@ -47,7 +47,7 @@ def main():
         config = yaml.safe_load(f)
     config["train"]["epochs"] = 1 # Reduce epochs until we want a full run
     trainer = ModelTrainer(model, df, **config)
-    trainer.train(print_per_epoch=1)
+    trainer.train(print_per_epoch=1, inner_loop_progress_bar=True)
     trainer.test()
 
 
