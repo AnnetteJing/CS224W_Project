@@ -4,14 +4,13 @@ print(sys.path)
 import yaml
 import torch
 import torch.nn.functional as F
-from pytorch_geometric_temporal.torch_geometric_temporal.nn.recurrent import DCRNN
-from pytorch_geometric_temporal.torch_geometric_temporal.dataset import PemsBayDatasetLoader, METRLADatasetLoader
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 from CS224W_Project import *
 from src.utils.trainer import *
-
+from pytorch_geometric_temporal.torch_geometric_temporal.nn.recurrent import DCRNN
+from pytorch_geometric_temporal.torch_geometric_temporal.dataset import PemsBayDatasetLoader, METRLADatasetLoader
 
 # Model definition
 class RecurrentGCN(torch.nn.Module):
