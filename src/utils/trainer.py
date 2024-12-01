@@ -104,7 +104,7 @@ class ModelTrainer:
         # Compute loss
         return self.loss_func(y=y_norm, y_hat=y_hat)
 
-    def train_epoch(self) -> float:
+    def train_epoch(self, use_progress_bar: bool = False) -> float:
         """
         Train the model using self.df["train"]
         """
@@ -112,7 +112,8 @@ class ModelTrainer:
         train_loss = 0
         self.optimizer.zero_grad()
         # for x, y in self.df["train"].batches[:10]:
-        for x, y in self.df["train"].batches:
+        iter_train_batches = tqdm(self.df["train"].batches) if use_progress_bar else self.df["train"].batches
+        for x, y in iter_train_batches:
             x, y = x.to(self.device), y.to(self.device)
             with self.amp_context:
                 y_hat = self.get_preds(x=x)
@@ -129,7 +130,7 @@ class ModelTrainer:
         train_loss /= self.df["train"].num_batches
         return train_loss
 
-    def valid_epoch(self) -> Optional[float]:
+    def valid_epoch(self, use_progress_bar: bool = False) -> Optional[float]:
         """
         Evaluate the model using self.df["valid"]
         """
@@ -139,7 +140,8 @@ class ModelTrainer:
         valid_loss = 0
         with torch.no_grad(), self.amp_context:
             # for x, y in self.df["valid"].batches[:10]:
-            for x, y in self.df["valid"].batches:
+            iter_valid_batches = tqdm(self.df["valid"].batches) if use_progress_bar else self.df["valid"].batches
+            for x, y in iter_valid_batches:
                 x, y = x.to(self.device), y.to(self.device)
                 y_hat = self.get_preds(x=x)
                 valid_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
@@ -148,7 +150,13 @@ class ModelTrainer:
         valid_loss /= self.df["valid"].num_batches
         return valid_loss
 
-    def train(self, verbose: bool = True, print_per_epoch: int = 10, early_stopping: bool = True) -> None:
+    def train(
+        self, 
+        verbose: bool = True, 
+        print_per_epoch: int = 10, 
+        early_stopping: bool = True, 
+        inner_loop_progress_bar: bool = False
+    ) -> None:
         """
         Train & validate the model for multiple epochs, saving the best model based on validation loss 
         (use training loss if validation loss is not available).
@@ -165,8 +173,8 @@ class ModelTrainer:
         for epoch in epoch_loop:
             if verbose:
                 start_time = time.time()
-            train_loss = self.train_epoch()
-            valid_loss = self.valid_epoch()
+            train_loss = self.train_epoch(use_progress_bar=inner_loop_progress_bar)
+            valid_loss = self.valid_epoch(use_progress_bar=inner_loop_progress_bar)
             # Save best model
             loss = valid_loss if valid_loss else train_loss
             if loss < best_loss:
