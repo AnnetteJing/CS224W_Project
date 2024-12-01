@@ -170,23 +170,24 @@ class TimeSeriesDataset:
         each batch is a namedtuple with batch.x being shape [B, V, F, W] and batch.y being shape [B, V, F, H], 
         and BatchedData.num_samples is the total number of samples (sum of batch lengths). 
             - train: data[:num_train]
-            - test: data[num_train:num_train_test]
-            - valid: data[num_train_test:]
+            - valid: data[num_train:num_train_valid]
+            - test: data[num_train_valid:]
         self.scaler: Scaler object with shift & scale set to the mean & std of the training samples 
             (across all nodes and training timesteps)
         """
         assert train > 0, "Train ratio must be positive"
         num_train = round(train * self.snapshot_count)
-        num_train_test = num_train + round(test * self.snapshot_count)
+        valid = 1 - train - test
+        num_train_valid = num_train + round(valid * self.snapshot_count)
         # Create data splits
         self.data_splits = {
             "train": self._create_batches(
                 batch_size=batch_size, end=num_train, shuffle=shuffle_train, fill_last_batch=True
             ), 
-            "test": self._create_batches(
-                batch_size=batch_size, start=num_train, end=num_train_test
+            "valid": self._create_batches(
+                batch_size=batch_size, start=num_train, end=num_train_valid
             ), 
-            "valid": self._create_batches(batch_size=batch_size, start=num_train_test)
+            "test": self._create_batches(batch_size=batch_size, start=num_train_valid)
         }
         # Create Scaler based on the mean & std of training data
         num_train_samp = self._indices[num_train - 1][-1] # Index of last sample in train split
