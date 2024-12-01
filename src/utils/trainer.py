@@ -113,6 +113,7 @@ class ModelTrainer:
         self.optimizer.zero_grad()
         # for x, y in self.df["train"].batches[:10]:
         for x, y in self.df["train"].batches:
+            x, y = x.to(self.device), y.to(self.device)
             with self.amp_context:
                 y_hat = self.get_preds(x=x)
                 train_batch_loss = self.get_batch_loss(y=y, y_hat=y_hat)
@@ -139,6 +140,7 @@ class ModelTrainer:
         with torch.no_grad(), self.amp_context:
             # for x, y in self.df["valid"].batches[:10]:
             for x, y in self.df["valid"].batches:
+                x, y = x.to(self.device), y.to(self.device)
                 y_hat = self.get_preds(x=x)
                 valid_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
                 torch.cuda.empty_cache()
@@ -212,6 +214,7 @@ class ModelTrainer:
         with torch.no_grad(), self.amp_context:
             # for x, y in test_data.batches[:10]:
             for x, y in test_data.batches:
+                x, y = x.to(self.device), y.to(self.device)
                 # Compute test loss based on model prediction of normalized targets 
                 y_hat = self.get_preds(x=x)
                 test_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
