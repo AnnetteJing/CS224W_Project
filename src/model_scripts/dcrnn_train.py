@@ -43,7 +43,6 @@ class RecurrentGCN(torch.nn.Module):
 def main():
     df = TimeSeriesDataset(PemsBayDatasetLoader(), batch_size=32)
     model = RecurrentGCN(node_features=2)
-    # CONFIG_PATH = "~/CS224W_Project/src/configs"
     with open(os.path.join(CONFIG_PATH, "train_config.yaml"), "r") as f:
         config = yaml.safe_load(f)
     config["train"]["epochs"] = 1 # Reduce epochs until we want a full run
