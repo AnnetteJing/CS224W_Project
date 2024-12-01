@@ -48,7 +48,7 @@ def main():
     config["train"]["epochs"] = 1 # Reduce epochs until we want a full run
     trainer = ModelTrainer(model, df, **config)
     trainer.train(print_per_epoch=1, inner_loop_progress_bar=True)
-    trainer.test()
+    trainer.test(use_progress_bar=True)
 
 
 if __name__ == "__main__":
