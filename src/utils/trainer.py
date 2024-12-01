@@ -111,7 +111,6 @@ class ModelTrainer:
         self.model.train()
         train_loss = 0
         self.optimizer.zero_grad()
-        # for x, y in self.df["train"].batches[:10]:
         iter_train_batches = tqdm(self.df["train"].batches) if use_progress_bar else self.df["train"].batches
         for x, y in iter_train_batches:
             x, y = x.to(self.device), y.to(self.device)
@@ -126,7 +125,6 @@ class ModelTrainer:
         self.gradscaler.step(self.optimizer)
         self.gradscaler.update()
         self.scheduler.step()
-        # train_loss /= 10
         train_loss /= self.df["train"].num_batches
         return train_loss
 
@@ -139,14 +137,12 @@ class ModelTrainer:
         self.model.eval()
         valid_loss = 0
         with torch.no_grad(), self.amp_context:
-            # for x, y in self.df["valid"].batches[:10]:
             iter_valid_batches = tqdm(self.df["valid"].batches) if use_progress_bar else self.df["valid"].batches
             for x, y in iter_valid_batches:
                 x, y = x.to(self.device), y.to(self.device)
                 y_hat = self.get_preds(x=x)
                 valid_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
                 torch.cuda.empty_cache()
-        # valid_loss /= 10
         valid_loss /= self.df["valid"].num_batches
         return valid_loss
 
@@ -222,7 +218,6 @@ class ModelTrainer:
         self.model.eval()
         test_loss = 0
         with torch.no_grad(), self.amp_context:
-            # for x, y in test_data.batches[:10]:
             iter_test_batches = tqdm(test_data.batches) if use_progress_bar else test_data.batches
             for x, y in iter_test_batches:
                 x, y = x.to(self.device), y.to(self.device)
@@ -234,7 +229,6 @@ class ModelTrainer:
                 evaluator.update_metrics(y=y, y_hat=y_hat)
                 # Free up cache
                 torch.cuda.empty_cache()
-        # test_loss /= 10
         test_loss /= test_data.num_batches
         print(f"Test loss = {test_loss:.4f}")
         evaluator.print_metrics()
