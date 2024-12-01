@@ -165,6 +165,7 @@ class ModelTrainer:
         print_per_epoch: Number of epochs between printing losses if verbose=True
         early_stopping: Whether to perform early stopping when validation loss has been increasing for 15 epochs
             (use training loss if validation loss is not available)
+        inner_loop_progress_bar: Whether to use progress bars when looping over the train & validation batches
         """
         best_loss = float("inf")
         best_model_epoch = 0
@@ -208,6 +209,7 @@ class ModelTrainer:
         Test the model's performance
 
         test_data: Data used for testing. Defaults to self.df["test"]
+        use_progress_bar: Whether to use a progress bar for looping over the test batches
         ---
         evaluator: Evaluator object that records performance details
         """
