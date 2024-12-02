@@ -68,11 +68,11 @@ def main():
 
         print(f"Saving test results...")
         metrics = {
-            "num_samples": evaluator.num_samples.detach().numpy(), 
-            "num_samples_non_zero": evaluator.num_samples_non_zero.detach().numpy(), 
-            "sse": evaluator.sse.detach().numpy(),
-            "sae": evaluator.sae.detach().numpy(), 
-            "sape": evaluator.sape.detach().numpy(),
+            "num_samples": evaluator.num_samples.detach().cpu().numpy(), 
+            "num_samples_non_zero": evaluator.num_samples_non_zero.detach().cpu().numpy(), 
+            "sse": evaluator.sse.detach().cpu().numpy(),
+            "sae": evaluator.sae.detach().cpu().numpy(), 
+            "sape": evaluator.sape.detach().cpu().numpy(),
         }
         np.savez(os.path.join(save_path, f"{df_name}_metrics.npz"), metrics)
         
