@@ -31,7 +31,7 @@ def main():
     # Create model
     match args.model.lower():
         case "dcrnn":
-            model = DCRNNModel(**config.get("model"))
+            model = DCRNNModel(**config.pop("model"))
         case _:
             raise ValueError(f"Model {args.model} not found")
 
