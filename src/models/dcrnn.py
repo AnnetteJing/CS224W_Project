@@ -6,11 +6,11 @@ from pytorch_geometric_temporal.torch_geometric_temporal.nn.recurrent import DCR
 
 
 class DCRNNModel(torch.nn.Module):
-    def __init__(self, node_features: int):
+    def __init__(self, num_features: int, hidden_channels: int, filter_size: int):
         super().__init__()
-        self.dcrnn1 = DCRNN(in_channels=node_features, out_channels=64, K=2)
-        self.dcrnn2 = DCRNN(in_channels=64, out_channels=64, K=2)
-        self.linear = torch.nn.Linear(64, 12)
+        self.dcrnn1 = DCRNN(in_channels=num_features, out_channels=hidden_channels, K=filter_size)
+        self.dcrnn2 = DCRNN(in_channels=hidden_channels, out_channels=hidden_channels, K=filter_size)
+        self.linear = torch.nn.Linear(hidden_channels, 12)
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_weight: torch.Tensor):
         batch_size, num_nodes, features, timesteps = x.size()
