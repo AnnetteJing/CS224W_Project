@@ -163,6 +163,8 @@ class ModelTrainer:
             (use training loss if validation loss is not available)
         inner_loop_progress_bar: Whether to use progress bars when looping over the train & validation batches
         """
+        self.train_loss = []
+        self.valid_loss = []
         best_loss = float("inf")
         best_model_epoch = 0
         num_loss_increase, prev_loss = 0, float("inf") # Needed for early stopping
@@ -172,6 +174,9 @@ class ModelTrainer:
                 start_time = time.time()
             train_loss = self.train_epoch(use_progress_bar=inner_loop_progress_bar)
             valid_loss = self.valid_epoch(use_progress_bar=inner_loop_progress_bar)
+            self.train_loss.append(train_loss)
+            if valid_loss is not None:
+                self.valid_loss.append(valid_loss)
             # Save best model
             loss = valid_loss if valid_loss else train_loss
             if loss < best_loss:

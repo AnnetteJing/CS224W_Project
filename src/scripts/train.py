@@ -66,6 +66,10 @@ def main():
             os.makedirs(save_path)
         torch.save(trainer.model.state_dict(), os.path.join(save_path, "state_dict.pt"))
 
+        print(f"Saving training & validation losses...")
+        np.save(os.path.join(save_path, "loss_train.npy"), np.array(trainer.train_loss))
+        np.save(os.path.join(save_path, "loss_valid.npy"), np.array(trainer.valid_loss))
+
         print(f"Saving test results...")
         np.savez_compressed(
             os.path.join(save_path, "metrics.npz"),
