@@ -53,7 +53,7 @@ def main():
         print(f"Training on {df_name.upper()} dataset...")
         trainer = ModelTrainer(model, df, **config)
         trainer.train(
-            print_per_epoch=(1 if args.debug else 10), 
+            print_per_epoch=(1 if args.debug else 5), 
             inner_loop_progress_bar=args.debug
         )
 
