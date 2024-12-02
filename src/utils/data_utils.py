@@ -164,7 +164,7 @@ class TimeSeriesDataset:
             - False: (t - W + 1, ..., t, t + 1, ..., t + H) is returned according to t = 0, 1, ...
             - True: (t - W + 1, ..., t, t + 1, ..., t + H) is returned based on a random order of t
         batch_size (B): Number of continuous timeslices to load. See __init__()
-        free_memory: 
+        free_memory: Whether to delete attributes only relevant to data-splitting
         ---
         self.data_splits: Dict of BatchedData. BatchedData.batches is a list of batches assigned to the split, 
         each batch is a namedtuple with batch.x being shape [B, V, F, W] and batch.y being shape [B, V, F, H], 
