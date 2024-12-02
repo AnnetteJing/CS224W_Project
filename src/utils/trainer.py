@@ -149,7 +149,7 @@ class ModelTrainer:
     def train(
         self, 
         verbose: bool = True, 
-        print_per_epoch: int = 10, 
+        print_per_epoch: int = 5, 
         early_stopping: bool = True, 
         inner_loop_progress_bar: bool = False
     ) -> None:
