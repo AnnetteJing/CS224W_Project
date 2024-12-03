@@ -18,6 +18,8 @@ def main():
     parser.add_argument("-b", "--batch-size", type=int, default=32)
     parser.add_argument("-c", "--config", type=str, default=None)
     parser.add_argument("-d", "--data", type=str, default="both")
+    parser.add_argument("-s", "--save-path", type=str, default=None)
+    parser.add_argument("--full", action="store_true", help="Full run, saves to designated path if save_path is unspecified")
     parser.add_argument("--debug", action="store_true", help="Debug mode, reduces epoch to 1")
     args = parser.parse_args()
         
@@ -61,9 +63,16 @@ def main():
         evaluator = trainer.test(use_progress_bar=True)
 
         print(f"Saving model state dict...")
-        save_path = os.path.join(RESULTS_PATH, args.model, df_name)
+        if args.save_path is None:
+            if args.full:
+                save_path = os.path.join(RESULTS_PATH, args.model, df_name)
+            else:
+                save_path = os.path.join(RESULTS_PATH, "test", df_name)
+        else:
+            save_path = args.save_path
         if not os.path.exists(save_path):
             os.makedirs(save_path)
+
         torch.save(trainer.model.state_dict(), os.path.join(save_path, "state_dict.pt"))
 
         print(f"Saving training & validation losses...")
