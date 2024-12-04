@@ -88,8 +88,11 @@ def main():
             sae=evaluator.sae.detach().cpu().numpy(), 
             sape=evaluator.sape.detach().cpu().numpy(),
         )
+        forecast_file_name = f"{args.model}_{df_name}"
+        if args.debug:
+            forecast_file_name += "_debug"
         np.savez_compressed(
-            os.path.join(save_path, "results.npz"),
+            os.path.join(save_path, f"{forecast_file_name}.npz"),
             targets=targets, 
             forecasts=forecasts,
         )
