@@ -93,6 +93,7 @@ def main():
             targets=targets, 
             forecasts=forecasts,
         )
+        print(f"Results saved under {save_path} !")
         
 
 if __name__ == "__main__":
