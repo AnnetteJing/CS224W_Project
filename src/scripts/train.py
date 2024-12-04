@@ -60,7 +60,7 @@ def main():
         )
 
         print(f"Testing on {df_name.upper()} dataset...")
-        evaluator = trainer.test(use_progress_bar=True)
+        evaluator, targets, forecasts = trainer.test(use_progress_bar=True)
 
         print(f"Saving model state dict...")
         if args.save_path is None:
@@ -87,6 +87,11 @@ def main():
             sse=evaluator.sse.detach().cpu().numpy(),
             sae=evaluator.sae.detach().cpu().numpy(), 
             sape=evaluator.sape.detach().cpu().numpy(),
+        )
+        np.savez_compressed(
+            os.path.join(save_path, "results.npz"),
+            targets=targets, 
+            forecasts=forecasts,
         )
         
 

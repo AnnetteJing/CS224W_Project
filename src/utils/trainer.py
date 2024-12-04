@@ -205,7 +205,11 @@ class ModelTrainer:
             print(f"Saving best model from epoch {best_model_epoch} with loss {best_loss:4f}")
         self.model = best_model
 
-    def test(self, test_data: Optional[BatchedData] = None, use_progress_bar: bool = False) -> Evaluator:
+    def test(
+        self, 
+        test_data: Optional[BatchedData] = None, 
+        use_progress_bar: bool = False
+    ) -> tuple[Evaluator, np.ndarray, np.ndarray]:
         """
         Test the model's performance
 
@@ -213,6 +217,9 @@ class ModelTrainer:
         use_progress_bar: Whether to use a progress bar for looping over the test batches
         ---
         evaluator: Evaluator object that records performance details
+        targets: [N, V, F, H] OR [N, V, H]. Values to be forecasted
+        forecasts: [N, V, F, H] OR [N, V, H]. Forecast of the targets
+            N is the number of observations in all test batches
         """
         test_data = self.df["test"] if test_data is None else test_data
         evaluator = Evaluator(
@@ -222,6 +229,7 @@ class ModelTrainer:
         )
         self.model.eval()
         test_loss = 0
+        targets, forecasts = [], []
         with torch.no_grad(), self.amp_context:
             iter_test_batches = tqdm(test_data.batches) if use_progress_bar else test_data.batches
             for x, y in iter_test_batches:
@@ -232,9 +240,16 @@ class ModelTrainer:
                 # Update evaluator based on model prediction of targets (not normalized)
                 y_hat = self.scaler.unnormalize(y_hat, feature_idx=self.feature_idx)
                 evaluator.update_metrics(y=y, y_hat=y_hat)
+                # Save target & forecast
+                if y.shape != y_hat.shape and self.feature_idx is not None:
+                    y = y[:, :, self.feature_idx, :]
+                targets.append(y.detach().cpu().numpy())
+                forecasts.append(y_hat.detach().cpu().numpy())
                 # Free up cache
                 torch.cuda.empty_cache()
         test_loss /= test_data.num_batches
         print(f"Test loss = {test_loss:.4f}")
         evaluator.print_metrics()
-        return evaluator
+        targets = np.concatenate(targets, axis=0)
+        forecasts = np.concatenate(forecasts, axis=0)
+        return evaluator, targets, forecasts
