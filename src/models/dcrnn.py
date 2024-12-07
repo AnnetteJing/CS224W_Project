@@ -12,7 +12,7 @@ class DCRNNModel(torch.nn.Module):
         self.dcrnn2 = DCRNN(in_channels=hidden_channels, out_channels=hidden_channels, K=filter_size)
         self.linear = torch.nn.Linear(hidden_channels, 12)
 
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_weight: torch.Tensor):
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_weight: torch.Tensor) -> torch.Tensor:
         batch_size, num_nodes, features, timesteps = x.size()
         h1 = None
         h2 = None
