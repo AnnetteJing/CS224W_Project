@@ -196,8 +196,8 @@ class ModelTrainer:
                     num_loss_increase += 1
                 else:
                     num_loss_increase = 0
-                if num_loss_increase == 15:
-                    print("Loss has been increasing for 15 epochs, performing early stopping...")
+                if num_loss_increase == 10:
+                    print("Loss has been increasing for 10 epochs, performing early stopping...")
                     break
                 prev_loss = loss
         # Load best model
