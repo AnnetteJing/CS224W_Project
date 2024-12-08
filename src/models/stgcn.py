@@ -49,7 +49,7 @@ class STGCNModel(torch.nn.Module):
         x = torch.permute(x, (0, 3, 1, 2)) # [B, V, F, W] -> [B, W, V, F]
         h1 = self.st_conv1(x, edge_index=edge_index, edge_weight=edge_weight) # [B, W_1, V, C]
         h2 = self.st_conv2(h1, edge_index=edge_index, edge_weight=edge_weight) # [B, W_2, V, C]
-        h2 = h2.permute(h2, (0, 2, 1, 3)).flatten(2, 3) # [B, V, W_2 * C]
+        h2 = torch.permute(h2, (0, 2, 1, 3)).flatten(2, 3) # [B, V, W_2 * C]
         out = self.linear(h2) # [B, V, H]
         return out
 
