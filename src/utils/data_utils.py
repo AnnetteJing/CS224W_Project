@@ -90,6 +90,9 @@ class TimeSeriesDataset:
         self.snapshot_count = dataset.snapshot_count # N
         self._x = torch.stack([snapshot.x for snapshot in dataset]) # [N, V, F, W]
         self._y = torch.stack([snapshot.y for snapshot in dataset]) # [N, V, F, H]
+        # The data source uses 0 for missing values, we replace it with NaN for clarity
+        self._x = torch.where(self._x == 0, float("nan"), self._x)
+        self._y = torch.where(self._y == 0, float("nan"), self._y)
         # Given the graph is static, edge_index & edge_attr are the same for all timestamps
         self.edge_index = dataset[0].edge_index # [2, E]
         self.edge_attr = dataset[0].edge_attr # [E,]
