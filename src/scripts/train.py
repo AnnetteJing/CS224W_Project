@@ -62,6 +62,7 @@ def main():
         print(f"Testing on {df_name.upper()} dataset...")
         evaluator, targets, forecasts = trainer.test(use_progress_bar=True)
 
+        # Save results, including model state_dict, losses, and performance metrics
         print(f"Saving model state dict...")
         if args.save_path is None:
             if args.full:
@@ -88,15 +89,23 @@ def main():
             sae=evaluator.sae.detach().cpu().numpy(), 
             sape=evaluator.sape.detach().cpu().numpy(),
         )
+
+        print(f"Results saved under {save_path}")
+
+        # Save forecasts & targets separately under a folder ignored by git
+        forecast_save_path = os.path.join(RESULTS_PATH, "forecasts")
+        if not os.path.exists(forecast_save_path):
+            os.makedirs(forecast_save_path)
         forecast_file_name = f"{args.model}_{df_name}"
         if args.debug:
             forecast_file_name += "_debug"
         np.savez_compressed(
-            os.path.join(save_path, f"{forecast_file_name}.npz"),
+            os.path.join(forecast_save_path, f"{forecast_file_name}.npz"),
             targets=targets, 
             forecasts=forecasts,
         )
-        print(f"Results saved under {save_path} !")
+
+        print(f"Forecasts saved under {forecast_save_path}")
 
 
 if __name__ == "__main__":
