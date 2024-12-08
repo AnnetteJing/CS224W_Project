@@ -134,18 +134,18 @@ class ModelTrainer:
             self.gradscaler.scale(train_batch_loss).backward() # Scale loss before backprop
             train_loss += train_batch_loss.item()
             torch.cuda.empty_cache()
-        # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
-        if epoch % 20 == 0:
-            input_example, output_example, target_example = self._select_example(x=x, y_hat=y_hat, y=y)
-            self.train_input_output_example["inputs"].append(input_example)
-            self.train_input_output_example["outputs"].append(output_example)
-            self.train_input_output_example["targets"].append(target_example)
         # Optimize 
         self.gradscaler.unscale_(self.optimizer)
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=self.max_grad_norm)
         self.gradscaler.step(self.optimizer)
         self.gradscaler.update()
         self.scheduler.step()
+        # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
+        if epoch % 20 == 0:
+            input_example, output_example, target_example = self._select_example(x=x, y_hat=y_hat, y=y)
+            self.train_input_output_example["inputs"].append(input_example)
+            self.train_input_output_example["outputs"].append(output_example)
+            self.train_input_output_example["targets"].append(target_example)
         # Return training loss for the epoch
         train_loss /= self.df["train"].num_batches
         return train_loss
@@ -233,13 +233,13 @@ class ModelTrainer:
                     print("Loss has been increasing for 10 epochs, performing early stopping...")
                     break
                 prev_loss = loss
-        # Stack list of examples from different epochs into one np.array (for each key)
-        self.train_input_output_example = {k: np.stack(val) for k, val in self.train_input_output_example.items()}
-        self.valid_input_output_example = {k: np.stack(val) for k, val in self.valid_input_output_example.items()}
         # Load best model
         if verbose:
             print(f"Saving best model from epoch {best_model_epoch} with loss {best_loss:4f}")
         self.model = best_model
+        # Stack list of examples from different epochs into one np.array (for each key)
+        self.train_input_output_example = {k: np.stack(val) for k, val in self.train_input_output_example.items()}
+        self.valid_input_output_example = {k: np.stack(val) for k, val in self.valid_input_output_example.items()}
 
     def test(
         self, 
