@@ -7,6 +7,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 from CS224W_Project import *
 from src.models.dcrnn import DCRNNModel
+from src.models.stgcn import STGCNModel
 from src.utils.trainer import *
 
 from pytorch_geometric_temporal.torch_geometric_temporal.dataset import PemsBayDatasetLoader, METRLADatasetLoader
@@ -30,13 +31,6 @@ def main():
     if args.debug:
         config["train"]["epochs"] = 1 # Reduce epochs to 1
 
-    # Create model
-    match args.model.lower():
-        case "dcrnn":
-            model = DCRNNModel(**config.pop("model"))
-        case _:
-            raise ValueError(f"Model {args.model} not found")
-
     # Load datasets
     match args.data.lower():
         case "metr" | "metr-la" | "metr_la" | "metrla":
@@ -50,8 +44,18 @@ def main():
             }
 
     # Train & test
+    model_config = config.pop("model")
     for df_name, df in dfs.items():
         print("###############################################")
+        print(f"Creating model for {df_name.upper()} dataset...")
+        match args.model.lower():
+            case "dcrnn":
+                model = DCRNNModel(**model_config)
+            case "stgcn":
+                model = STGCNModel(num_nodes=df.num_nodes, **model_config)
+            case _:
+                raise ValueError(f"Model {args.model} not found")
+            
         print(f"Training on {df_name.upper()} dataset...")
         trainer = ModelTrainer(model, df, **config)
         trainer.train(
