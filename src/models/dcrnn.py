@@ -6,6 +6,9 @@ from pytorch_geometric_temporal.torch_geometric_temporal.nn.recurrent import DCR
 
 
 class DCRNNModel(torch.nn.Module):
+    """
+    https://github.com/liyaguang/DCRNN/blob/128dc26e265491aad88bc4cb67d6ab2d2193532b/dcrnn_train.py
+    """
     def __init__(self, num_features: int, hidden_channels: int, filter_size: int):
         super().__init__()
         self.dcrnn1 = DCRNN(in_channels=num_features, out_channels=hidden_channels, K=filter_size)
