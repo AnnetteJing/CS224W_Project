@@ -163,7 +163,16 @@ class ModelTrainer:
             for x, y in iter_valid_batches:
                 x, y = x.to(self.device), y.to(self.device)
                 y_hat = self.get_preds(x=x)
-                valid_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
+                if torch.sum(torch.isnan(y_hat)).item() > 0:
+                    print("y_hat has NaNs")
+                    print(y_hat)
+                    break
+                valid_batch_loss = self.get_batch_loss(y=y, y_hat=y_hat)
+                if torch.sum(torch.isnan(valid_batch_loss)).item() > 0:
+                    print("valid_batch_loss is NaN")
+                    print(valid_batch_loss)
+                valid_loss += valid_batch_loss.item()
+                # valid_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
                 torch.cuda.empty_cache()
         # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
         if epoch % 20 == 0:
