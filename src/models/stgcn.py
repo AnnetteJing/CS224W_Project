@@ -6,7 +6,7 @@ from CS224W_Project import *
 from pytorch_geometric_temporal.torch_geometric_temporal.nn.attention import STConv
 
 
-class STGCNModel:
+class STGCNModel(torch.nn.Module):
     """
     https://github.com/VeritasYin/STGCN_IJCAI-18/blob/master/main.py
     """
