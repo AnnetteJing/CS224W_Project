@@ -99,6 +99,7 @@ def main():
         print(f"Results saved under {save_path}")
 
         # Save forecasts & targets separately under a folder ignored by git
+        print(f"Saving forecasts & targets...")
         forecast_save_path = os.path.join(RESULTS_PATH, "forecasts")
         if not os.path.exists(forecast_save_path):
             os.makedirs(forecast_save_path)
@@ -114,7 +115,17 @@ def main():
             forecasts=forecasts,
         )
 
-        print(f"Forecasts saved under {forecast_save_path}")
+        np.savez_compressed(
+            os.path.join(forecast_save_path, f"{forecast_file_name}_example.npz"), 
+            train_inputs=trainer.train_input_output_example["inputs"],
+            train_outputs=trainer.train_input_output_example["outputs"],
+            train_targets=trainer.train_input_output_example["targets"],
+            valid_inputs=trainer.valid_input_output_example["inputs"],
+            valid_outputs=trainer.valid_input_output_example["outputs"],
+            valid_targets=trainer.valid_input_output_example["targets"],
+        )
+
+        print(f"Forecasts & examples saved under {forecast_save_path}")
 
 
 if __name__ == "__main__":

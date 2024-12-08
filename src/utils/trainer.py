@@ -105,8 +105,20 @@ class ModelTrainer:
         ) # [B, V, F, H] -> [B, V, F, H] if self.feature_idx is None else [B, V, H]
         # Compute loss
         return self.loss_func(y=y_norm, y_hat=y_hat)
+    
+    def _select_example(
+        self, x: torch.Tensor, y_hat: torch.Tensor, y: torch.Tensor
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Select the index 0, node 0 from the input batch as an example to return
+        """
+        input_example = x[0, 0, self.feature_idx, :].detach().cpu().numpy()
+        y_hat_unnorm = self.scaler.unnormalize(y_hat, feature_idx=self.feature_idx)
+        output_example = y_hat_unnorm[0, 0, self.feature_idx, :].detach().cpu().numpy()
+        target_example = y[0, 0, self.feature_idx, :].detach().cpu().numpy()
+        return (input_example, output_example, target_example)
 
-    def train_epoch(self, use_progress_bar: bool = False) -> float:
+    def train_epoch(self, epoch: int, use_progress_bar: bool = False) -> float:
         """
         Train the model using self.df["train"]
         """
@@ -122,15 +134,23 @@ class ModelTrainer:
             self.gradscaler.scale(train_batch_loss).backward() # Scale loss before backprop
             train_loss += train_batch_loss.item()
             torch.cuda.empty_cache()
+        # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
+        if epoch % 20 == 0:
+            input_example, output_example, target_example = self._select_example(x=x, y_hat=y_hat, y=y)
+            self.train_input_output_example["input"].append(input_example)
+            self.train_input_output_example["output"].append(output_example)
+            self.train_input_output_example["targets"].append(target_example)
+        # Optimize 
         self.gradscaler.unscale_(self.optimizer)
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=self.max_grad_norm)
         self.gradscaler.step(self.optimizer)
         self.gradscaler.update()
         self.scheduler.step()
+        # Return training loss for the epoch
         train_loss /= self.df["train"].num_batches
         return train_loss
 
-    def valid_epoch(self, use_progress_bar: bool = False) -> Optional[float]:
+    def valid_epoch(self, epoch: int, use_progress_bar: bool = False) -> Optional[float]:
         """
         Evaluate the model using self.df["valid"]
         """
@@ -145,6 +165,13 @@ class ModelTrainer:
                 y_hat = self.get_preds(x=x)
                 valid_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
                 torch.cuda.empty_cache()
+        # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
+        if epoch % 20 == 0:
+            input_example, output_example, target_example = self._select_example(x=x, y_hat=y_hat, y=y)
+            self.valid_input_output_example["input"].append(input_example)
+            self.valid_input_output_example["output"].append(output_example)
+            self.valid_input_output_example["targets"].append(target_example)
+        # Return validation loss for the epoch
         valid_loss /= self.df["valid"].num_batches
         return valid_loss
 
@@ -170,12 +197,16 @@ class ModelTrainer:
         best_loss = float("inf")
         best_model_epoch = 0
         num_loss_increase, prev_loss = 0, float("inf") # Needed for early stopping
+        # For recording example input-output pairs & the targets every 20 epochs
+        self.train_input_output_example = {"inputs": [], "outputs": [], "targets": []}
+        self.valid_input_output_example = {"inputs": [], "outputs": [], "targets": []}
+        # Train & validation loop
         epoch_loop = range(self.epochs) if verbose else tqdm(range(self.epochs))
         for epoch in epoch_loop:
             if verbose:
                 start_time = time.time()
-            train_loss = self.train_epoch(use_progress_bar=inner_loop_progress_bar)
-            valid_loss = self.valid_epoch(use_progress_bar=inner_loop_progress_bar)
+            train_loss = self.train_epoch(epoch=epoch, use_progress_bar=inner_loop_progress_bar)
+            valid_loss = self.valid_epoch(epoch=epoch, use_progress_bar=inner_loop_progress_bar)
             self.train_loss.append(train_loss)
             if valid_loss is not None:
                 self.valid_loss.append(valid_loss)
@@ -202,6 +233,9 @@ class ModelTrainer:
                     print("Loss has been increasing for 10 epochs, performing early stopping...")
                     break
                 prev_loss = loss
+        # Stack list of examples from different epochs into one np.array (for each key)
+        self.train_input_output_example = {k: np.stack(val) for k, val in self.train_input_output_example.items()}
+        self.valid_input_output_example = {k: np.stack(val) for k, val in self.valid_input_output_example.items()}
         # Load best model
         if verbose:
             print(f"Saving best model from epoch {best_model_epoch} with loss {best_loss:4f}")
