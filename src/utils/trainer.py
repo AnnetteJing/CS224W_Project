@@ -114,7 +114,7 @@ class ModelTrainer:
         """
         input_example = x[0, 0, self.feature_idx, :].detach().cpu().numpy()
         y_hat_unnorm = self.scaler.unnormalize(y_hat, feature_idx=self.feature_idx)
-        output_example = y_hat_unnorm[0, 0, self.feature_idx, :].detach().cpu().numpy()
+        output_example = y_hat_unnorm[0, 0, :].detach().cpu().numpy()
         target_example = y[0, 0, self.feature_idx, :].detach().cpu().numpy()
         return (input_example, output_example, target_example)
 
