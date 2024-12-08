@@ -20,6 +20,7 @@ def main():
     parser.add_argument("-c", "--config", type=str, default=None)
     parser.add_argument("-d", "--data", type=str, default="both")
     parser.add_argument("-s", "--save-path", type=str, default=None)
+    parser.add_argument("-f", "--forecast-file-name", type=str, default=None)
     parser.add_argument("--full", action="store_true", help="Full run, saves to designated path if save_path is unspecified")
     parser.add_argument("--debug", action="store_true", help="Debug mode, reduces epoch to 1")
     args = parser.parse_args()
@@ -100,7 +101,10 @@ def main():
         forecast_save_path = os.path.join(RESULTS_PATH, "forecasts")
         if not os.path.exists(forecast_save_path):
             os.makedirs(forecast_save_path)
-        forecast_file_name = f"{args.model}_{df_name}"
+        if args.forecast_file_name is None:
+            forecast_file_name = f"{args.model}_{df_name}"
+        else:
+            forecast_file_name = args.forecast_file_name
         if args.debug:
             forecast_file_name += "_debug"
         np.savez_compressed(
