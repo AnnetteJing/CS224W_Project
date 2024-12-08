@@ -75,7 +75,7 @@ def main():
             else:
                 save_path = os.path.join(RESULTS_PATH, "test", df_name)
         else:
-            save_path = args.save_path
+            save_path = os.path.join(RESULTS_PATH, args.save_path)
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
