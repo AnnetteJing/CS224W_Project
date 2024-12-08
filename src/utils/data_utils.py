@@ -90,8 +90,6 @@ class TimeSeriesDataset:
         self.snapshot_count = dataset.snapshot_count # N
         self._x = torch.stack([snapshot.x for snapshot in dataset]) # [N, V, F, W]
         self._y = torch.stack([snapshot.y for snapshot in dataset]) # [N, V, F, H]
-        # The data source uses 0 for missing values, we replace it with NaN in the targets for clarity
-        self._y = torch.where(self._y == 0, float("nan"), self._y)
         # Given the graph is static, edge_index & edge_attr are the same for all timestamps
         self.edge_index = dataset[0].edge_index # [2, E]
         self.edge_attr = dataset[0].edge_attr # [E,]
@@ -129,8 +127,10 @@ class TimeSeriesDataset:
         if not (0 <= start < end <= self.snapshot_count):
             return None
         x, y = self._x[start:end], self._y[start:end]
-        num_samples = len(x)
+        # The data source uses 0 for missing values, we replace it with NaN in the targets for clarity
+        y = torch.where(y == 0, float("nan"), y)
         # Optionally append random samples so that num_samples is a multiple of B (batch_size)
+        num_samples = len(x)
         if fill_last_batch and num_samples % batch_size != 0:
             extra_sample_idx = np.random.choice(
                 range(num_samples), 
