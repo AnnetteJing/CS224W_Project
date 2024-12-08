@@ -19,7 +19,7 @@ def main():
     parser.add_argument("-b", "--batch-size", type=int, default=32)
     parser.add_argument("-c", "--config", type=str, default=None)
     parser.add_argument("-d", "--data", type=str, default="both")
-    parser.add_argument("-s", "--save-path", type=str, default=None)
+    parser.add_argument("-s", "--save-folder", type=str, default=None)
     parser.add_argument("-f", "--forecast-file-name", type=str, default=None)
     parser.add_argument("--full", action="store_true", help="Full run, saves to designated path if save_path is unspecified")
     parser.add_argument("--debug", action="store_true", help="Debug mode, reduces epoch to 1")
@@ -69,13 +69,14 @@ def main():
 
         # Save results, including model state_dict, losses, and performance metrics
         print(f"Saving model state dict...")
-        if args.save_path is None:
+        if args.save_folder is None:
             if args.full:
-                save_path = os.path.join(RESULTS_PATH, args.model, df_name)
+                save_folder = args.model
             else:
-                save_path = os.path.join(RESULTS_PATH, "test", df_name)
+                save_folder = "test"
         else:
-            save_path = os.path.join(RESULTS_PATH, args.save_path)
+            save_folder = args.save_folder
+        save_path = os.path.join(RESULTS_PATH, save_folder, df_name)
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
