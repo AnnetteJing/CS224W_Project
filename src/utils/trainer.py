@@ -71,15 +71,17 @@ class ModelTrainer:
         """
         Computes model predictions of the targets
 
-        x: [B, V, F, W]. Model inputs
+        x: [B, V, F, W]. Model inputs (unnormalized)
         unnormalize: Whether to unnormalize the predictions
             If True, we are predicting the targets; otherwise we are predicting the normalized targets
         ---
         y_hat: [B, V, F, H] OR [B, V, H]. Model predictions
         """
+        # Normalize model inputs
+        x_norm = self.scaler.normalize(x).to(self.device)
         # Model prediction of normalized targets
         y_hat = self.model(
-            x=x.to(self.device), 
+            x=x_norm, 
             edge_index=self.edge_index, 
             edge_weight=self.edge_attr
         ) # [B, V, F, H] if self.feature_idx is None else [B, V, H]
