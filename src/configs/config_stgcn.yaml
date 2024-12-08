@@ -1,7 +1,7 @@
 ---
 model:
   num_features: 2
-  hidden_channels: 64
+  hidden_channels: 16
   temporal_filter_size: 3 # K
   graph_filter_size: 3 # K
 optim: 
