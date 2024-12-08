@@ -137,8 +137,8 @@ class ModelTrainer:
         # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
         if epoch % 20 == 0:
             input_example, output_example, target_example = self._select_example(x=x, y_hat=y_hat, y=y)
-            self.train_input_output_example["input"].append(input_example)
-            self.train_input_output_example["output"].append(output_example)
+            self.train_input_output_example["inputs"].append(input_example)
+            self.train_input_output_example["outputs"].append(output_example)
             self.train_input_output_example["targets"].append(target_example)
         # Optimize 
         self.gradscaler.unscale_(self.optimizer)
@@ -168,8 +168,8 @@ class ModelTrainer:
         # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
         if epoch % 20 == 0:
             input_example, output_example, target_example = self._select_example(x=x, y_hat=y_hat, y=y)
-            self.valid_input_output_example["input"].append(input_example)
-            self.valid_input_output_example["output"].append(output_example)
+            self.valid_input_output_example["inputs"].append(input_example)
+            self.valid_input_output_example["outputs"].append(output_example)
             self.valid_input_output_example["targets"].append(target_example)
         # Return validation loss for the epoch
         valid_loss /= self.df["valid"].num_batches
