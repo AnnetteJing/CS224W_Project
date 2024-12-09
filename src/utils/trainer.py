@@ -277,7 +277,9 @@ class ModelTrainer:
                 x, y = x.to(self.device), y.to(self.device)
                 # Compute test loss based on model prediction of normalized targets 
                 y_hat = self.get_preds(x=x)
-                test_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
+                test_batch_loss = self.get_batch_loss(y=y, y_hat=y_hat).item()
+                if not math.isnan(test_batch_loss):
+                    test_loss += test_batch_loss
                 # Update evaluator based on model prediction of targets (not normalized)
                 y_hat = self.scaler.unnormalize(y_hat, feature_idx=self.feature_idx)
                 evaluator.update_metrics(y=y, y_hat=y_hat)
