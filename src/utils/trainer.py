@@ -230,12 +230,12 @@ class ModelTrainer:
                 print(print_statement)
             # Optional early stopping
             if early_stopping:
-                if loss > prev_loss:
+                if loss >= prev_loss:
                     num_loss_increase += 1
                 else:
                     num_loss_increase = 0
                 if num_loss_increase == 10:
-                    print("Loss has been increasing for 10 epochs, performing early stopping...")
+                    print("Loss hasn't been decreasing for 10 epochs, performing early stopping...")
                     break
                 prev_loss = loss
         # Load best model
