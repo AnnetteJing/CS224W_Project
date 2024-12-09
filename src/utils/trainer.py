@@ -167,7 +167,7 @@ class ModelTrainer:
                 y_hat = self.get_preds(x=x)
                 valid_batch_loss = self.get_batch_loss(y=y, y_hat=y_hat).item()
                 if not math.isnan(valid_batch_loss):
-                    valid_loss += valid_batch_loss.item()
+                    valid_loss += valid_batch_loss
                 # valid_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
                 torch.cuda.empty_cache()
         # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
