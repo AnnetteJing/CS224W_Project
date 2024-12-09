@@ -114,6 +114,7 @@ def main():
             targets=targets, 
             forecasts=forecasts,
         )
+        print(f"Forecasts saved as {forecast_save_path}/{forecast_file_name}.npz")
 
         np.savez_compressed(
             os.path.join(forecast_save_path, f"{forecast_file_name}_example.npz"), 
@@ -124,8 +125,7 @@ def main():
             valid_outputs=trainer.valid_input_output_example["outputs"],
             valid_targets=trainer.valid_input_output_example["targets"],
         )
-
-        print(f"Forecasts & examples saved under {forecast_save_path}")
+        print(f"Examples saved as {forecast_save_path}/{forecast_file_name}_example.npz")
 
 
 if __name__ == "__main__":
