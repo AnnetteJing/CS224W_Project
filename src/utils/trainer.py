@@ -4,6 +4,7 @@ from typing import Optional, Callable
 from tqdm import tqdm
 import time
 import copy
+import math
 
 from src.utils.data_utils import *
 from src.utils.metrics import *
@@ -131,8 +132,9 @@ class ModelTrainer:
             with self.amp_context:
                 y_hat = self.get_preds(x=x)
                 train_batch_loss = self.get_batch_loss(y=y, y_hat=y_hat)
-            self.gradscaler.scale(train_batch_loss).backward() # Scale loss before backprop
-            train_loss += train_batch_loss.item()
+            if not math.isnan(train_batch_loss.item()):
+                self.gradscaler.scale(train_batch_loss).backward() # Scale loss before backprop
+                train_loss += train_batch_loss.item()
             torch.cuda.empty_cache()
         # Optimize 
         self.gradscaler.unscale_(self.optimizer)
@@ -163,15 +165,9 @@ class ModelTrainer:
             for x, y in iter_valid_batches:
                 x, y = x.to(self.device), y.to(self.device)
                 y_hat = self.get_preds(x=x)
-                if torch.sum(torch.isnan(y_hat)).item() > 0:
-                    print("y_hat has NaNs")
-                    print(y_hat)
-                    break
-                valid_batch_loss = self.get_batch_loss(y=y, y_hat=y_hat)
-                if torch.sum(torch.isnan(valid_batch_loss)).item() > 0:
-                    print("valid_batch_loss is NaN")
-                    print(valid_batch_loss)
-                valid_loss += valid_batch_loss.item()
+                valid_batch_loss = self.get_batch_loss(y=y, y_hat=y_hat).item()
+                if not math.isnan(valid_batch_loss):
+                    valid_loss += valid_batch_loss.item()
                 # valid_loss += self.get_batch_loss(y=y, y_hat=y_hat).item()
                 torch.cuda.empty_cache()
         # Save example input-output pair (idx 0, node 0 from the last batch) every 20 epochs
