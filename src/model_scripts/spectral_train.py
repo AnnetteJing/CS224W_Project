@@ -58,11 +58,13 @@ class SpectralGraphConv(nn.Module):
         self.K = K
         self.directed_type = directed_type
         
-        self.theta = nn.Parameter(torch.FloatTensor(K, in_channels, out_channels))
+        # CHANGED: Replaced theta parameter with single weight matrix
+        self.weight = nn.Parameter(torch.FloatTensor(in_channels, out_channels)) #CHANGED
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.kaiming_uniform_(self.theta)
+        # CHANGED: Initialize single weight matrix instead of theta
+        nn.init.kaiming_uniform_(self.weight) #CHANGED
 
     def forward(self, x, L):
         """
@@ -71,79 +73,100 @@ class SpectralGraphConv(nn.Module):
         """
         batch_size, num_nodes, _ = x.size()
         
-        # Initialize list to store Chebyshev polynomials for each batch
-        Tk_batched = []
+        # CHANGED: Removed Chebyshev polynomial computation and replaced with SVD
+        outputs = [] #NEW
         
-        # Process each batch separately
+        # NEW: Process each batch with SVD instead of Chebyshev
         for b in range(batch_size):
-            # Chebyshev polynomials for current batch
-            Tk = [torch.eye(num_nodes, device=x.device), L[b]]
+            # Compute SVD of the Laplacian
+            U, S, Vh = torch.linalg.svd(L[b], full_matrices=False) #NEW
             
-            for k in range(2, self.K):
-                Tk.append(2 * L[b] @ Tk[-1] - Tk[-2])
+            # Keep only top K frequency components
+            U_k = U[:, :self.K]  # [num_nodes, K] #NEW
+            S_k = S[:self.K]     # [K] #NEW
             
-            Tk_batched.append(torch.stack(Tk))  # [K, num_nodes, num_nodes]
+            # Transform signals to spectral domain
+            x_spectral = torch.matmul(U_k.T, x[b])  # [K, in_channels] #NEW
+            
+            # Apply spectral filtering
+            x_filtered = torch.matmul(x_spectral, self.weight)  # [K, out_channels] #NEW
+            x_filtered = x_filtered * S_k.unsqueeze(-1)  # Scale by singular values #NEW
+            
+            # Transform back to spatial domain
+            x_spatial = torch.matmul(U_k, x_filtered)  # [num_nodes, out_channels] #NEW
+            
+            outputs.append(x_spatial) #NEW
         
-        Tk_batched = torch.stack(Tk_batched)  # [batch_size, K, num_nodes, num_nodes]
-        
-        # Reshape x for batch multiplication
-        x = x.unsqueeze(1)  # [batch_size, 1, num_nodes, in_channels]
-        
-        # Initialize output tensor
-        out = torch.zeros(batch_size, num_nodes, self.out_channels, device=x.device)
-        
-        # Perform spectral convolution for each order k
-        for k in range(self.K):
-            # [batch_size, num_nodes, num_nodes] @ [batch_size, num_nodes, in_channels]
-            conv = torch.matmul(Tk_batched[:, k], x.squeeze(1))
-            # [batch_size, num_nodes, in_channels] @ [in_channels, out_channels]
-            out += torch.matmul(conv, self.theta[k])
+        # CHANGED: Stack batch outputs instead of accumulating Chebyshev terms
+        out = torch.stack(outputs)  # [batch_size, num_nodes, out_channels] #CHANGED
         
         return out
 
 class SpectralGCN(torch.nn.Module):
-    def __init__(self, node_features, num_timesteps, device, directed_type='svd'):
+    def __init__(self, node_features, num_timesteps, device, hidden_dim=32, num_layers=3, K=10):
         super(SpectralGCN, self).__init__()
         self.node_features = node_features
         self.num_timesteps = num_timesteps
-        self.spectral_conv = SpectralGraphConv(
-            in_channels=node_features * num_timesteps,
-            out_channels=32,
-            K=3,
-            directed_type=directed_type
-        )
         self.device = device
-        self.linear = torch.nn.Linear(32, 12)  # Output 12 timesteps
+        self.hidden_dim = hidden_dim
+        
+        # GRU for temporal modeling
+        self.gru = nn.GRU(
+            input_size=node_features,
+            hidden_size=hidden_dim,
+            num_layers=1,
+            batch_first=True
+        )
+        
+        # Multiple spectral conv layers
+        self.conv_layers = nn.ModuleList([
+            SpectralGraphConv(
+                in_channels=hidden_dim,
+                out_channels=hidden_dim,
+                K=K
+            ) for _ in range(num_layers)
+        ])
+        
+        # Final prediction layer
+        self.linear = nn.Linear(hidden_dim, 12)
 
     def forward(self, x, edge_index, edge_weight):
         """
         x: Input tensor [batch_size, num_nodes, node_features, num_timesteps]
-        edge_index: Edge indices [2, num_edges]
-        edge_weight: Edge weights [num_edges]
         """
         batch_size, num_nodes, features, timesteps = x.size()
         
-        # Reshape input to combine features and timesteps
-        x = x.reshape(batch_size, num_nodes, features * timesteps)
+        # Process temporal dimension with GRU
+        x_temporal = x.transpose(2, 3).contiguous()
+        x_temporal = x_temporal.view(batch_size * num_nodes, timesteps, features)
+        x_temporal, _ = self.gru(x_temporal)
         
-        # Convert edge_index and weight to batched adjacency matrices
+        # Get final GRU hidden state
+        x = x_temporal[:, -1, :].view(batch_size, num_nodes, self.hidden_dim)
+        
+        # Create Laplacian matrix
         A = torch.sparse_coo_tensor(
             edge_index, edge_weight, (num_nodes, num_nodes)
         ).to_dense().to(self.device)
         
-        # Create batched Laplacian matrices
         A_batched = A.unsqueeze(0).expand(batch_size, -1, -1)
         D_batched = torch.diag_embed(A_batched.sum(dim=2))
         D_sqrt_inv = torch.linalg.inv(torch.sqrt(D_batched))
         L_batched = torch.eye(num_nodes, device=self.device).unsqueeze(0).expand(batch_size, -1, -1) - \
                    torch.matmul(torch.matmul(D_sqrt_inv, A_batched), D_sqrt_inv)
         
-        # Apply spectral convolution
-        h = self.spectral_conv(x, L_batched)  # [batch_size, num_nodes, 32]
-        h = F.relu(h)
-        h = self.linear(h)  # [batch_size, num_nodes, 12]
+        # Apply multiple spectral conv layers with skip connections
+        for conv in self.conv_layers:
+            identity = x  # Save for skip connection
+            x_conv = conv(x, L_batched)
+            x_conv = F.relu(x_conv)
+            x = x_conv + identity  # Skip connection
         
-        return h
+        # Final prediction
+        out = self.linear(x)
+        
+        return out
+
 class Evaluator:
     def __init__(self, num_nodes):
         self.num_nodes = num_nodes
@@ -214,7 +237,7 @@ class Evaluator:
 def main():
     # Initialize dataset and model
     df = TimeSeriesDataset(PemsBayDatasetLoader(), batch_size=16)
-    epochs = 100
+    epochs = 1
     device_str = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = torch.device(device_str)
     model = SpectralGCN(node_features=2, num_timesteps=12, device=device).to(device)
@@ -225,8 +248,8 @@ def main():
     grad_accumulation_steps = 2
 
     # Training loop
-    train_dataset = df.data_splits["train"].batches
-    valid_dataset = df.data_splits["valid"].batches
+    train_dataset = df.data_splits["train"].batches[:10]
+    valid_dataset = df.data_splits["valid"].batches[:10]
     device_context = torch.amp.autocast("cuda", enabled=(device.type == "cuda"))
 
     for epoch in tqdm(range(epochs)):
