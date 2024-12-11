@@ -7,6 +7,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 from CS224W_Project import *
 from src.models.dcrnn import DCRNNModel
+from src.models.spectral_svd_approx import ApproxSVDSpectralGCN
 from src.models.stgcn import STGCNModel
 from src.utils.trainer import *
 
@@ -52,6 +53,8 @@ def main():
         match args.model.lower():
             case "dcrnn":
                 model = DCRNNModel(**model_config)
+            case "spectral_svd_approx":
+                model = ApproxSVDSpectralGCN(**model_config)
             case "stgcn":
                 model = STGCNModel(num_nodes=df.num_nodes, **model_config)
             case _:
