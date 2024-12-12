@@ -1,9 +1,7 @@
 ---
 model:
   num_features: 2
-  hidden_channels: 16
-  temporal_filter_size: 3 # K
-  graph_filter_size: 3 # K
+  hidden_channels: 64
 optim: 
   initial_lr: 0.01
   lr_decay_ratio: 0.1
